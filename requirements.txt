@@ -1,0 +1,15 @@
+reflex==0.8.17
+httpx
+pymongo
+firebase-admin
+twilio
+resend
+openai
+python-dotenv
+reflex-ag-grid
+reportlab
+openpyxl
+fastapi
+uvicorn[standard]
+motor
+pydantic
