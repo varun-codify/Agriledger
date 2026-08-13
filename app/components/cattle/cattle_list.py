@@ -1,4 +1,7 @@
 import reflex as rx
+
+from app.components.cattle.cattle_table import cattle_grid
+from app.components.common import segmented_control
 from app.states.cattle_state import CattleState
 
 
@@ -22,6 +25,7 @@ def summary_stat_card(
 def animal_type_badge(animal_type: rx.Var[str]) -> rx.Component:
     color_map = {
         "cow": "bg-blue-100 text-blue-800",
+        "bull": "bg-indigo-100 text-indigo-800",
         "buffalo": "bg-gray-200 text-gray-800",
         "sheep": "bg-green-100 text-green-800",
         "goat": "bg-orange-100 text-orange-800",
@@ -93,6 +97,17 @@ def add_cattle_dialog() -> rx.Component:
                 rx.el.h2(
                     "Add New Animal", class_name="text-2xl font-bold text-stone-800"
                 ),
+                rx.cond(
+                    CattleState.add_cattle_error != "",
+                    rx.el.div(
+                        rx.icon(
+                            "triangle-alert", class_name="h-4 w-4 mr-2 flex-shrink-0"
+                        ),
+                        CattleState.add_cattle_error,
+                        class_name="mt-3 flex items-start text-red-600 text-sm bg-red-50 border border-red-200 p-3 rounded-lg",
+                    ),
+                    None,
+                ),
                 rx.el.form(
                     rx.el.div(
                         rx.el.label("Name", class_name="text-sm font-medium"),
@@ -106,15 +121,16 @@ def add_cattle_dialog() -> rx.Component:
                         ),
                         rx.el.label("Animal Type", class_name="text-sm font-medium"),
                         rx.el.select(
-                            "cow",
-                            "buffalo",
-                            "sheep",
-                            "goat",
-                            "hen",
-                            "cock",
-                            "chick",
+                            rx.el.option("Cow", value="cow"),
+                            rx.el.option("Bull", value="bull"),
+                            rx.el.option("Buffalo", value="buffalo"),
+                            rx.el.option("Sheep", value="sheep"),
+                            rx.el.option("Goat", value="goat"),
+                            rx.el.option("Hen", value="hen"),
+                            rx.el.option("Cock", value="cock"),
+                            rx.el.option("Chick", value="chick"),
                             name="animal_type",
-                            class_name="mt-1 w-full p-2 border rounded-md",
+                            class_name="mt-1 w-full p-2 border rounded-md bg-white",
                         ),
                         rx.el.label("Breed", class_name="text-sm font-medium"),
                         rx.el.input(
@@ -161,7 +177,7 @@ def add_cattle_dialog() -> rx.Component:
                             ),
                             class_name="col-span-2",
                         ),
-                        class_name="grid grid-cols-2 gap-4",
+                        class_name="grid grid-cols-1 sm:grid-cols-2 gap-4",
                     ),
                     rx.el.div(
                         rx.el.button(
@@ -180,9 +196,8 @@ def add_cattle_dialog() -> rx.Component:
                         class_name="flex gap-4 mt-6",
                     ),
                     on_submit=CattleState.add_cattle,
-                    reset_on_submit=True,
                 ),
-                class_name="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl z-50",
+                class_name="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl z-50 max-h-[90vh] overflow-y-auto",
             ),
             class_name="fixed inset-0 flex items-center justify-center p-4 z-50",
         ),
@@ -199,6 +214,15 @@ def animal_filter_button(label: str, filter_value: str) -> rx.Component:
             "px-4 py-1.5 rounded-lg text-sm font-semibold bg-emerald-500 text-white",
             "px-4 py-1.5 rounded-lg text-sm font-semibold bg-white text-stone-600 border",
         ),
+    )
+
+
+def view_toggle() -> rx.Component:
+    """Segmented control to switch between the card grid and the table view."""
+    return segmented_control(
+        CattleState.view_mode,
+        [("cards", "Cards", "layout-grid"), ("table", "Table", "table")],
+        CattleState.set_view_mode,
     )
 
 
@@ -250,17 +274,25 @@ def cattle_management_page() -> rx.Component:
                 animal_filter_button("Poultry", "poultry"),
                 class_name="flex gap-2 flex-wrap",
             ),
-            rx.el.button(
-                rx.icon("plus", class_name="h-4 w-4 mr-2"),
-                "Add New Animal",
-                on_click=lambda: CattleState.toggle_add_cattle_dialog(True),
-                class_name="flex items-center bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-emerald-600 transition-all",
+            rx.el.div(
+                view_toggle(),
+                rx.el.button(
+                    rx.icon("plus", class_name="h-4 w-4 mr-2"),
+                    "Add New Animal",
+                    on_click=lambda: CattleState.toggle_add_cattle_dialog(True),
+                    class_name="flex items-center bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-emerald-600 transition-all",
+                ),
+                class_name="flex items-center gap-3",
             ),
-            class_name="flex items-center justify-between mb-6",
+            class_name="flex items-center justify-between mb-6 flex-wrap gap-4",
         ),
-        rx.el.div(
-            rx.foreach(CattleState.filtered_cattle, cattle_card),
-            class_name="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6",
+        rx.cond(
+            CattleState.view_mode == "table",
+            cattle_grid(row_data=CattleState.filtered_cattle),
+            rx.el.div(
+                rx.foreach(CattleState.filtered_cattle, cattle_card),
+                class_name="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6",
+            ),
         ),
         add_cattle_dialog(),
     )

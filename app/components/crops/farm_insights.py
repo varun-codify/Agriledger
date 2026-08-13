@@ -1,5 +1,6 @@
 import reflex as rx
-from app.states.crop_state import CropState, WEATHER_CODES
+
+from app.states.crop_state import CropState
 
 
 def current_weather_card() -> rx.Component:
@@ -85,7 +86,7 @@ def weather_forecast_section() -> rx.Component:
             rx.el.h3("7-Day Forecast", class_name="font-semibold text-stone-800 mb-4"),
             rx.el.div(
                 rx.foreach(CropState.daily_forecast_data, daily_forecast_card),
-                class_name="grid grid-cols-7 gap-3",
+                class_name="grid grid-cols-3 md:grid-cols-7 gap-3",
             ),
             class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 col-span-2",
         ),

@@ -1,4 +1,5 @@
 import reflex as rx
+
 from app.states.transaction_state import TransactionState
 
 
@@ -28,7 +29,7 @@ def step_6_review() -> rx.Component:
                 TransactionState.selected_category["name"],
                 TransactionState.selected_category["icon"],
             ),
-            review_item("Amount", "$" + TransactionState.amount_str, "dollar-sign"),
+            review_item("Amount", "₹" + TransactionState.amount_str, "indian-rupee"),
             review_item("Date", TransactionState.date, "calendar-days"),
             review_item(
                 "Notes",

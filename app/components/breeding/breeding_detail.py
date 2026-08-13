@@ -1,6 +1,7 @@
+
 import reflex as rx
+
 from app.states.breeding_state import BreedingState, CalvingRecordDialogState
-import datetime
 
 
 def timeline_step(
@@ -97,7 +98,57 @@ def pregnancy_confirmation_dialog() -> rx.Component:
                 ),
             ),
             rx.el.div(
-                class_name="bg-white p-8 rounded-2xl shadow-xl w-full max-w-lg z-50"
+                rx.el.h2(
+                    "Confirm Pregnancy",
+                    class_name="text-xl font-bold text-stone-800",
+                ),
+                rx.el.p(
+                    f"Animal: {BreedingState.current_breeding_cycle['cattle_name']}",
+                    class_name="text-sm text-stone-500 mt-1",
+                ),
+                rx.el.div(
+                    rx.el.label(
+                        "Outcome", class_name="block text-sm font-medium text-stone-700 mb-1"
+                    ),
+                    rx.el.select(
+                        rx.el.option("Pregnant", value="pregnant"),
+                        rx.el.option("Not Pregnant", value="not_pregnant"),
+                        value=BreedingState.pregnancy_confirmation_outcome,
+                        on_change=BreedingState.set_pregnancy_confirmation_outcome,
+                        class_name="w-full px-3 py-2 border rounded-md",
+                    ),
+                    rx.el.label(
+                        "Confirmation Date",
+                        class_name="block text-sm font-medium text-stone-700 mb-1 mt-4",
+                    ),
+                    rx.el.input(
+                        type="date",
+                        value=BreedingState.pregnancy_confirmation_date,
+                        on_change=BreedingState.set_pregnancy_confirmation_date,
+                        class_name="w-full px-3 py-2 border rounded-md",
+                    ),
+                    class_name="my-6",
+                ),
+                rx.el.div(
+                    rx.el.button(
+                        "Cancel",
+                        on_click=lambda: BreedingState.set_show_pregnancy_confirmation_dialog(
+                            False
+                        ),
+                        class_name="px-4 py-2 bg-stone-200 rounded-md font-semibold",
+                    ),
+                    rx.el.button(
+                        "Save Result",
+                        on_click=lambda: BreedingState.update_pregnancy_status(
+                            BreedingState.current_breeding_cycle["id"],
+                            BreedingState.pregnancy_confirmation_outcome == "pregnant",
+                            BreedingState.pregnancy_confirmation_date,
+                        ),
+                        class_name="px-4 py-2 bg-blue-500 text-white rounded-md font-semibold hover:bg-blue-600",
+                    ),
+                    class_name="flex justify-end gap-4",
+                ),
+                class_name="bg-white p-8 rounded-2xl shadow-xl w-full max-w-lg z-50 max-h-[90vh] overflow-y-auto",
             ),
             class_name="fixed inset-0 flex items-center justify-center p-4 z-50",
         ),
@@ -116,6 +167,17 @@ def calving_record_dialog() -> rx.Component:
                 rx.el.h2(
                     "Record Calving Outcome",
                     class_name="text-xl font-bold text-stone-800",
+                ),
+                rx.cond(
+                    BreedingState.calving_error != "",
+                    rx.el.div(
+                        rx.icon(
+                            "triangle-alert", class_name="h-4 w-4 mr-2 flex-shrink-0"
+                        ),
+                        BreedingState.calving_error,
+                        class_name="flex items-start text-red-600 text-sm bg-red-50 border border-red-200 p-3 rounded-lg mt-3",
+                    ),
+                    None,
                 ),
                 rx.el.form(
                     rx.el.div(
@@ -149,7 +211,7 @@ def calving_record_dialog() -> rx.Component:
                                     placeholder="e.g., Healthy and active",
                                     class_name="mt-1 w-full p-2 border rounded-md",
                                 ),
-                                class_name="grid grid-cols-2 gap-4 mt-4",
+                                class_name="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4",
                             ),
                             None,
                         ),
@@ -179,9 +241,8 @@ def calving_record_dialog() -> rx.Component:
                     on_submit=lambda form_data: BreedingState.record_calving(
                         BreedingState.current_breeding_cycle["id"], form_data
                     ),
-                    reset_on_submit=True,
                 ),
-                class_name="bg-white p-8 rounded-2xl shadow-xl w-full max-w-lg z-50",
+                class_name="bg-white p-8 rounded-2xl shadow-xl w-full max-w-lg z-50 max-h-[90vh] overflow-y-auto",
             ),
             class_name="fixed inset-0 flex items-center justify-center p-4 z-50",
         ),
@@ -209,7 +270,7 @@ def actions_section() -> rx.Component:
                 detail_card_action_button(
                     "clipboard-check",
                     "Confirm Pregnancy",
-                    rx.toast.info("Pregnancy confirmation not implemented yet."),
+                    lambda: BreedingState.set_show_pregnancy_confirmation_dialog(True),
                     "bg-blue-500 text-white hover:bg-blue-600",
                 ),
                 None,

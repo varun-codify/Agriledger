@@ -1,17 +1,19 @@
-import reflex as rx
-from typing import TypedDict, Literal
 import datetime
-import uuid
 import logging
-import httpx
+import uuid
 from collections import defaultdict
+from typing import TypedDict
+
+import httpx
+import reflex as rx
+
 from app.database import crud
+from app.states.auth_state import AuthState
 from app.database.models import (
+    ActivityType,
     Crop,
     CropActivity,
     HarvestRecord,
-    ActivityType,
-    CropStatus,
 )
 
 
@@ -105,6 +107,7 @@ class CropState(rx.State):
                 },
             ],
             "harvests": [],
+            "farm_id": "demo-farm",
         },
         {
             "id": "crop2",
@@ -140,6 +143,8 @@ class CropState(rx.State):
     show_add_crop_dialog: bool = False
     show_add_activity_dialog: bool = False
     show_add_harvest_dialog: bool = False
+    add_crop_error: str = ""
+    dialog_error: str = ""
     weather_data: WeatherData | None = None
     weather_loading: bool = True
     activity_types: list[ActivityType] = [
@@ -165,41 +170,65 @@ class CropState(rx.State):
     @rx.event
     def toggle_add_crop_dialog(self, open: bool):
         self.show_add_crop_dialog = open
+        if open:
+            self.add_crop_error = ""
 
     @rx.event
     async def fetch_crops_list(self):
-        """Fetches crops list from DB."""
-        crud.init_database_seeds({"crops": self.DEMO_CROPS_DATA})
-        self.crops_list = await crud.get_all_crops()
+        """Fetches crops list from DB (seeds demo data per-farm if empty)."""
+        auth = await self.get_state(AuthState)
+        await crud.ensure_farm_seed("crops", auth.farm_id, self.DEMO_CROPS_DATA)
+        self.crops_list = await crud.get_all_crops(farm_id=auth.farm_id)
 
     @rx.event
     async def add_crop(self, form_data: dict):
-        if not form_data.get("name") or not form_data.get("field_name"):
-            return rx.toast.error("Crop name and field name are required.")
+        name = str(form_data.get("name", "")).strip()
+        field_name = str(form_data.get("field_name", "")).strip()
+        planting_date = str(form_data.get("planting_date", "")).strip()
+        initial_cost_raw = str(form_data.get("initial_cost", "")).strip()
+
+        if not name:
+            self.add_crop_error = "Crop name is required."
+            return
+        if not field_name:
+            self.add_crop_error = "Field name is required."
+            return
+        if not planting_date:
+            self.add_crop_error = "Planting date is mandatory."
+            return
+        initial_cost = 0.0
+        if initial_cost_raw:
+            try:
+                initial_cost = float(initial_cost_raw)
+            except ValueError:
+                self.add_crop_error = "Initial cost must be a valid number."
+                return
         new_crop: Crop = {
             "id": str(uuid.uuid4()),
-            "name": form_data["name"],
-            "field_name": form_data["field_name"],
-            "planting_date": form_data["planting_date"],
+            "name": name,
+            "field_name": field_name,
+            "planting_date": planting_date,
             "status": "Planted",
-            "image_url": f"https://api.dicebear.com/9.x/shapes/svg?seed={form_data['name']}",
+            "image_url": f"https://api.dicebear.com/9.x/shapes/svg?seed={name}",
             "activities": [
                 {
                     "id": str(uuid.uuid4()),
-                    "date": form_data["planting_date"],
+                    "date": planting_date,
                     "activity_type": "Planting",
                     "notes": "Initial planting.",
-                    "cost": float(form_data.get("initial_cost", 0.0)),
+                    "cost": initial_cost,
                 }
             ],
             "harvests": [],
+            "farm_id": (await self.get_state(AuthState)).farm_id,
         }
         success = await crud.create_crop(new_crop)
         if success:
             self.crops_list.append(new_crop)
+            self.add_crop_error = ""
             self.toggle_add_crop_dialog(False)
             return rx.toast.success(f"'{new_crop['name']}' has been added.")
-        return rx.toast.error("Failed to save crop.")
+        self.add_crop_error = "Failed to save crop. Please try again."
 
     @rx.event(background=True)
     async def fetch_weather(self):
@@ -304,72 +333,106 @@ class CropState(rx.State):
         self.show_add_activity_dialog = open
         if open:
             self.current_dialog_date = datetime.date.today().isoformat()
+        self.dialog_error = ""
 
     @rx.event
     def toggle_add_harvest_dialog(self, open: bool):
         self.show_add_harvest_dialog = open
         if open:
             self.current_dialog_date = datetime.date.today().isoformat()
+        self.dialog_error = ""
 
     @rx.event
     async def add_activity(self, form_data: dict):
         if not self.current_crop:
             return rx.toast.error("No crop selected.")
-        try:
-            new_activity: CropActivity = {
-                "id": str(uuid.uuid4()),
-                "date": form_data["date"],
-                "activity_type": form_data["activity_type"],
-                "notes": form_data.get("notes", ""),
-                "cost": float(form_data.get("cost", 0.0)),
-            }
-            self.current_crop["activities"].insert(0, new_activity)
-            await crud.update_crop(
-                self.current_crop["id"], {"activities": self.current_crop["activities"]}
-            )
-            for i, c in enumerate(self.crops_list):
-                if c["id"] == self.current_crop["id"]:
-                    self.crops_list[i] = self.current_crop
-                    break
-            self.toggle_add_activity_dialog(False)
-            return rx.toast.success(
-                f"Activity '{new_activity['activity_type']}' added."
-            )
-        except (ValueError, KeyError) as e:
-            logging.exception(f"Error adding activity: {e}")
-            return rx.toast.error(f"Invalid data: {e}")
+        date = str(form_data.get("date", "")).strip()
+        activity_type = str(form_data.get("activity_type", "")).strip()
+        cost_raw = str(form_data.get("cost", "")).strip()
+        if not date:
+            self.dialog_error = "Date is mandatory."
+            return
+        if not activity_type:
+            self.dialog_error = "Please select an activity type."
+            return
+        cost = 0.0
+        if cost_raw:
+            try:
+                cost = float(cost_raw)
+            except ValueError:
+                self.dialog_error = "Cost must be a valid number."
+                return
+        new_activity: CropActivity = {
+            "id": str(uuid.uuid4()),
+            "date": date,
+            "activity_type": activity_type,
+            "notes": form_data.get("notes", ""),
+            "cost": cost,
+        }
+        self.current_crop["activities"].insert(0, new_activity)
+        await crud.update_crop(
+            self.current_crop["id"], {"activities": self.current_crop["activities"]}
+        )
+        for i, c in enumerate(self.crops_list):
+            if c["id"] == self.current_crop["id"]:
+                self.crops_list[i] = self.current_crop
+                break
+        self.dialog_error = ""
+        self.toggle_add_activity_dialog(False)
+        return rx.toast.success(
+            f"Activity '{new_activity['activity_type']}' added."
+        )
 
     @rx.event
     async def add_harvest(self, form_data: dict):
         if not self.current_crop:
             return rx.toast.error("No crop selected.")
+        date = str(form_data.get("date", "")).strip()
+        quantity_raw = str(form_data.get("quantity", "")).strip()
+        unit = str(form_data.get("unit", "kg")).strip()
+        income_raw = str(form_data.get("income", "")).strip()
+        if not date:
+            self.dialog_error = "Date is mandatory."
+            return
+        if not quantity_raw:
+            self.dialog_error = "Quantity is mandatory."
+            return
         try:
-            new_harvest: HarvestRecord = {
-                "id": str(uuid.uuid4()),
-                "date": form_data["date"],
-                "quantity": float(form_data.get("quantity", 0.0)),
-                "unit": form_data.get("unit", "kg"),
-                "income": float(form_data.get("income", 0.0)),
-            }
-            self.current_crop["harvests"].insert(0, new_harvest)
-            if self.current_crop["status"] != "Harvested":
-                self.current_crop["status"] = "Harvested"
-            await crud.update_crop(
-                self.current_crop["id"],
-                {
-                    "harvests": self.current_crop["harvests"],
-                    "status": self.current_crop["status"],
-                },
-            )
-            for i, c in enumerate(self.crops_list):
-                if c["id"] == self.current_crop["id"]:
-                    self.crops_list[i] = self.current_crop
-                    break
-            self.toggle_add_harvest_dialog(False)
-            return rx.toast.success(f"Harvest record added.")
-        except (ValueError, KeyError) as e:
-            logging.exception(f"Error adding harvest: {e}")
-            return rx.toast.error(f"Invalid data: {e}")
+            quantity = float(quantity_raw)
+        except ValueError:
+            self.dialog_error = "Quantity must be a valid number."
+            return
+        income = 0.0
+        if income_raw:
+            try:
+                income = float(income_raw)
+            except ValueError:
+                self.dialog_error = "Income must be a valid number."
+                return
+        new_harvest: HarvestRecord = {
+            "id": str(uuid.uuid4()),
+            "date": date,
+            "quantity": quantity,
+            "unit": unit,
+            "income": income,
+        }
+        self.current_crop["harvests"].insert(0, new_harvest)
+        if self.current_crop["status"] != "Harvested":
+            self.current_crop["status"] = "Harvested"
+        await crud.update_crop(
+            self.current_crop["id"],
+            {
+                "harvests": self.current_crop["harvests"],
+                "status": self.current_crop["status"],
+            },
+        )
+        for i, c in enumerate(self.crops_list):
+            if c["id"] == self.current_crop["id"]:
+                self.crops_list[i] = self.current_crop
+                break
+        self.dialog_error = ""
+        self.toggle_add_harvest_dialog(False)
+        return rx.toast.success("Harvest record added.")
 
     @rx.var
     def days_since_planting(self) -> int:

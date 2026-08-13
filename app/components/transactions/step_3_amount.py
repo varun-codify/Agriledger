@@ -1,4 +1,5 @@
 import reflex as rx
+
 from app.states.transaction_state import TransactionState
 
 
@@ -26,7 +27,7 @@ def step_3_amount() -> rx.Component:
             class_name="text-2xl font-bold text-stone-800 text-center mb-4",
         ),
         rx.el.div(
-            rx.el.span("$", class_name="text-4xl font-bold text-stone-400"),
+            rx.el.span("₹", class_name="text-4xl font-bold text-stone-400"),
             rx.el.p(
                 TransactionState.amount_str,
                 class_name="text-6xl font-bold text-stone-800",

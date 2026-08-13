@@ -1,18 +1,21 @@
 import reflex as rx
+
 from app.states.transaction_state import TransactionState
+
 from .step_1_type import step_1_type
 from .step_2_category import step_2_category
 from .step_3_amount import step_3_amount
 from .step_4_date import step_4_date
 from .step_5_notes import step_5_notes
 from .step_6_review import step_6_review
+from .step_7_coconut import step_7_coconut
+from .step_8_milk import step_8_milk
 
 
 def wizard_progress() -> rx.Component:
-    steps = ["Type", "Category", "Amount", "Date", "Notes", "Review"]
     return rx.el.div(
         rx.foreach(
-            steps,
+            TransactionState.wizard_steps,
             lambda step, index: rx.el.div(
                 rx.el.div(
                     rx.el.div(
@@ -31,14 +34,14 @@ def wizard_progress() -> rx.Component:
                         step,
                         class_name=rx.cond(
                             TransactionState.current_step > index,
-                            "text-xs font-semibold text-emerald-600 mt-1",
-                            "text-xs font-medium text-stone-500 mt-1",
+                            "text-xs font-semibold text-emerald-600 mt-1 hidden sm:block",
+                            "text-xs font-medium text-stone-500 mt-1 hidden sm:block",
                         ),
                     ),
                     class_name="flex flex-col items-center",
                 ),
                 rx.cond(
-                    index < len(steps) - 1,
+                    index < TransactionState.wizard_steps.length() - 1,
                     rx.el.div(
                         class_name=rx.cond(
                             TransactionState.current_step > index + 1,
@@ -64,7 +67,7 @@ def wizard_nav() -> rx.Component:
             disabled=TransactionState.current_step == 1,
         ),
         rx.cond(
-            TransactionState.current_step == 6,
+            TransactionState.current_step >= 6,
             rx.el.button(
                 "Submit Transaction",
                 on_click=TransactionState.submit_transaction,
@@ -109,9 +112,11 @@ def transaction_wizard() -> rx.Component:
                 (4, step_4_date()),
                 (5, step_5_notes()),
                 (6, step_6_review()),
+                (7, step_7_coconut()),
+                (8, step_8_milk()),
                 rx.el.div("Invalid Step"),
             ),
-            class_name="bg-white p-8 rounded-2xl shadow-sm border border-stone-100 w-full max-w-2xl mx-auto min-h-[400px]",
+            class_name="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-stone-100 w-full max-w-2xl mx-auto min-h-[400px]",
         ),
         wizard_nav(),
         on_mount=TransactionState.reset_wizard,

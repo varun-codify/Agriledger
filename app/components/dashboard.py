@@ -1,6 +1,8 @@
 import reflex as rx
-from app.states.dashboard_state import DashboardState
+
 from app.states.breeding_state import BreedingState
+from app.states.dashboard_state import DashboardState
+from app.states.transaction_state import TransactionState
 
 
 def summary_card(metric: rx.Var[dict]) -> rx.Component:
@@ -212,7 +214,8 @@ def expense_pie_chart() -> rx.Component:
                     rx.el.div(
                         rx.el.p("Total", class_name="text-sm text-stone-500"),
                         rx.el.p(
-                            "$1478", class_name="text-2xl font-bold text-stone-800"
+                            "₹" + DashboardState.total_expenses.to_string(),
+                            class_name="text-2xl font-bold text-stone-800",
                         ),
                         class_name="text-center transition-opacity",
                     ),
@@ -222,36 +225,6 @@ def expense_pie_chart() -> rx.Component:
             class_name="relative",
         ),
         class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 col-span-1 lg:col-span-2",
-    )
-
-
-def profit_loss_bar_chart() -> rx.Component:
-    return rx.el.div(
-        rx.el.h3(
-            "Monthly Profit & Loss",
-            class_name="text-lg font-semibold text-stone-800 mb-4",
-        ),
-        rx.recharts.bar_chart(
-            rx.recharts.cartesian_grid(
-                vertical=False, stroke_dasharray="3 3", class_name="stroke-stone-200"
-            ),
-            rx.recharts.graphing_tooltip(cursor={"fill": "rgba(231, 229, 228, 0.4)"}),
-            rx.recharts.x_axis(
-                data_key="month",
-                tick_line=False,
-                axis_line=False,
-                class_name="text-xs text-stone-500",
-            ),
-            rx.recharts.y_axis(
-                tick_line=False, axis_line=False, class_name="text-xs text-stone-500"
-            ),
-            rx.recharts.bar(data_key="profit", fill="#10b981", radius=[4, 4, 0, 0]),
-            rx.recharts.bar(data_key="loss", fill="#f43f5e", radius=[4, 4, 0, 0]),
-            data=DashboardState.profit_loss_data,
-            height=300,
-            class_name="w-full",
-        ),
-        class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 col-span-1 lg:col-span-4",
     )
 
 
@@ -345,10 +318,6 @@ def reminders_card() -> rx.Component:
     )
 
 
-from app.states.transaction_state import TransactionState
-from app.states.download_state import DownloadState
-
-
 def recent_transactions_list() -> rx.Component:
     """A list of recent transactions for the dashboard."""
     return rx.el.div(
@@ -370,7 +339,7 @@ def recent_transactions_list() -> rx.Component:
                     class_name="py-10",
                 ),
                 rx.foreach(
-                    TransactionState.transactions[-5:][::-1],
+                    TransactionState.recent_transactions,
                     lambda tx: rx.el.div(
                         rx.el.div(
                             rx.icon(
@@ -390,7 +359,7 @@ def recent_transactions_list() -> rx.Component:
                         ),
                         rx.el.p(
                             rx.cond(tx["type"] == "income", "+", "-")
-                            + "$"
+                            + "₹"
                             + tx["amount"].to_string(),
                             class_name=rx.cond(
                                 tx["type"] == "income",
@@ -408,11 +377,4 @@ def recent_transactions_list() -> rx.Component:
     )
 
 
-def project_download_button() -> rx.Component:
-    """A floating button to download the complete project."""
-    return rx.el.button(
-        rx.icon("download", class_name="h-5 w-5 mr-2"),
-        "Download Project",
-        on_click=DownloadState.create_project_zip,
-        class_name="fixed bottom-6 right-24 bg-emerald-600 text-white px-5 py-3 rounded-full shadow-lg hover:bg-emerald-700 transition-all hover:scale-105 z-30 flex items-center font-semibold border-2 border-white/20",
-    )
+

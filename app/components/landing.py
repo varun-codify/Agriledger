@@ -1,5 +1,4 @@
 import reflex as rx
-from app.states.download_state import DownloadState
 
 
 def hero_section() -> rx.Component:
@@ -15,7 +14,11 @@ def hero_section() -> rx.Component:
             rx.el.div(
                 # Badge or tagline
                 rx.el.div(
-                    rx.icon("sparkles", class_name="h-4 w-4 mr-2 text-emerald-600", aria_hidden="true"),
+                    rx.icon(
+                        "sparkles",
+                        class_name="h-4 w-4 mr-2 text-emerald-600",
+                        aria_hidden="true",
+                    ),
                     "Smart Farm Management Platform",
                     class_name="inline-flex items-center px-4 py-2 rounded-full bg-emerald-50 text-emerald-700 font-medium text-sm mb-6 border border-emerald-200",
                     role="note",
@@ -33,20 +36,26 @@ def hero_section() -> rx.Component:
                 rx.el.p(
                     "Track expenses, manage cattle, and gain smart insights to boost your farm's profitability. All in one simple, beautiful platform.",
                     class_name="mt-6 max-w-2xl mx-auto text-center text-lg md:text-xl text-stone-600 leading-relaxed",
-                    role="doc-subtitle",
+
                 ),
                 # CTA Buttons with proper accessibility
                 rx.el.div(
                     rx.el.a(
                         "Get Started Free",
-                        rx.icon("arrow-right", class_name="h-5 w-5 ml-2 group-hover:translate-x-1 transition-transform", aria_hidden="true"),
+                        rx.icon(
+                            "arrow-right",
+                            class_name="h-5 w-5 ml-2 group-hover:translate-x-1 transition-transform",
+                            aria_hidden="true",
+                        ),
                         href="/register",
                         class_name="group inline-flex items-center bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:from-emerald-600 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-emerald-300",
                         aria_label="Sign up for free account",
                         role="button",
                     ),
                     rx.el.a(
-                        rx.icon("play-circle", class_name="h-5 w-5 mr-2", aria_hidden="true"),
+                        rx.icon(
+                            "play-circle", class_name="h-5 w-5 mr-2", aria_hidden="true"
+                        ),
                         "Watch Demo",
                         href="#features",
                         class_name="inline-flex items-center bg-white text-stone-700 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-stone-50 transition-all border-2 border-stone-200 shadow-md hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-stone-300",
@@ -56,17 +65,6 @@ def hero_section() -> rx.Component:
                     role="group",
                     aria_label="Call to action buttons",
                 ),
-                # Download button (secondary)
-                rx.el.div(
-                    rx.el.button(
-                        rx.icon("download", class_name="h-4 w-4 mr-2", aria_hidden="true"),
-                        "Download Project Files",
-                        on_click=DownloadState.create_project_zip,
-                        class_name="inline-flex items-center text-stone-600 hover:text-stone-800 font-medium text-sm transition-colors underline-offset-4 hover:underline focus:outline-none focus:ring-2 focus:ring-stone-400 rounded px-2 py-1",
-                        aria_label="Download project source files",
-                    ),
-                    class_name="mt-6 text-center",
-                ),
                 class_name="max-w-5xl mx-auto flex flex-col items-center",
             ),
             # Dashboard Preview with proper accessibility
@@ -74,7 +72,7 @@ def hero_section() -> rx.Component:
                 rx.el.figure(
                     rx.image(
                         src="/dashboard-preview.png",
-                        alt="AgriLedger dashboard interface showing income statistics of $254,800, expense tracking at $145,320, net profit of $109,480, animal count of 1,250, milk production trends chart, expense categories pie chart, recent transactions table, current weather widget displaying 78°F sunny conditions, and upcoming tasks calendar for June 2024",
+                        alt="AgriLedger dashboard interface showing income statistics of ₹254,800, expense tracking at ₹145,320, net profit of ₹109,480, animal count of 1,250, milk production trends chart, expense categories pie chart, recent transactions table, current weather widget displaying 78°F sunny conditions, and upcoming tasks calendar for June 2024",
                         class_name="rounded-2xl w-full shadow-2xl ring-1 ring-stone-900/10",
                         loading="eager",
                         style={"aspectRatio": "16/9", "objectFit": "cover"},
@@ -244,7 +242,7 @@ def about_section() -> rx.Component:
                         role="group",
                         aria_label="Customer support availability",
                     ),
-                    class_name="mt-12 grid grid-cols-3 gap-8",
+                    class_name="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-8",
                     role="list",
                     aria_label="Company statistics",
                 ),
@@ -276,7 +274,7 @@ def pricing_card(
         rx.el.h3(plan, class_name="text-2xl font-bold text-stone-800"),
         rx.el.div(
             rx.el.span(
-                f"${price}",
+                f"₹{price}",
                 class_name="text-5xl font-bold text-stone-800",
                 aria_label=f"{price} dollars",
             ),
@@ -288,7 +286,11 @@ def pricing_card(
                 features,
                 lambda feature: rx.el.li(
                     rx.el.div(
-                        rx.icon("check", class_name="h-5 w-5 text-emerald-500", aria_hidden="true"),
+                        rx.icon(
+                            "check",
+                            class_name="h-5 w-5 text-emerald-500",
+                            aria_hidden="true",
+                        ),
                         class_name="flex-shrink-0 h-6 w-6 rounded-full bg-emerald-50 flex items-center justify-center",
                         role="img",
                         aria_label="Included feature",
@@ -376,7 +378,11 @@ def footer_section() -> rx.Component:
                 # Brand column
                 rx.el.div(
                     rx.el.div(
-                        rx.icon("leaf", class_name="h-8 w-8 text-emerald-500", aria_hidden="true"),
+                        rx.icon(
+                            "leaf",
+                            class_name="h-8 w-8 text-emerald-500",
+                            aria_hidden="true",
+                        ),
                         rx.el.span(
                             "AgriLedger", class_name="text-xl font-bold text-stone-800"
                         ),
@@ -389,9 +395,7 @@ def footer_section() -> rx.Component:
                 ),
                 # Quick Links
                 rx.el.div(
-                    rx.el.h4(
-                        "Quick Links", class_name="font-bold text-stone-800 mb-4"
-                    ),
+                    rx.el.h4("Quick Links", class_name="font-bold text-stone-800 mb-4"),
                     rx.el.ul(
                         rx.el.li(
                             rx.el.a(

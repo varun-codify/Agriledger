@@ -1,17 +1,15 @@
-import reflex as rx
-from typing import TypedDict, Literal, Optional
 import datetime
 import uuid
-from app.states.cattle_state import CattleState
+
+import reflex as rx
+
 from app.database import crud
 from app.database.models import (
     BreedingCycle,
-    FollowUpCheck,
-    BreedingStatus,
     CalvingOutcome,
-    BreedingCattleType,
-    CalfSex,
 )
+from app.states.auth_state import AuthState
+from app.states.cattle_state import CattleState
 
 
 class BreedingState(rx.State):
@@ -83,15 +81,36 @@ class BreedingState(rx.State):
     show_add_breeding_dialog: bool = False
     show_pregnancy_confirmation_dialog: bool = False
     show_calving_record_dialog: bool = False
+    pregnancy_confirmation_outcome: str = "pregnant"
+    pregnancy_confirmation_date: str = datetime.date.today().isoformat()
     current_breeding_cycle: BreedingCycle | None = None
     selected_filter: str = "all"
+    view_mode: str = "cards"  # "cards" | "table"
     new_breeding_cattle_id: str = ""
     new_hormone_date: str = datetime.date.today().isoformat()
     new_insemination_date: str = datetime.date.today().isoformat()
+    add_breeding_error: str = ""
+    calving_error: str = ""
 
     @rx.event
     def toggle_calving_record_dialog(self, open: bool):
         self.show_calving_record_dialog = open
+        if open:
+            self.calving_error = ""
+
+    @rx.event
+    def set_show_pregnancy_confirmation_dialog(self, open: bool):
+        self.show_pregnancy_confirmation_dialog = open
+        if open:
+            self.pregnancy_confirmation_date = datetime.date.today().isoformat()
+
+    @rx.event
+    def set_pregnancy_confirmation_outcome(self, outcome: str):
+        self.pregnancy_confirmation_outcome = outcome
+
+    @rx.event
+    def set_pregnancy_confirmation_date(self, date: str):
+        self.pregnancy_confirmation_date = date
 
     @rx.var
     def pregnancy_check_due_date_str(self) -> str:
@@ -138,28 +157,51 @@ class BreedingState(rx.State):
 
     @rx.event
     async def fetch_breeding_cycles(self):
-        """Fetch cycles from DB"""
-        crud.init_database_seeds({"breeding_cycles": self.DEMO_BREEDING_DATA})
-        self.breeding_cycles = await crud.get_all_breeding_cycles()
+        """Fetch cycles from DB (seeds demo data per-farm if empty)."""
+        auth = await self.get_state(AuthState)
+        await crud.ensure_farm_seed(
+            "breeding_cycles", auth.farm_id, self.DEMO_BREEDING_DATA
+        )
+        self.breeding_cycles = await crud.get_all_breeding_cycles(farm_id=auth.farm_id)
 
     @rx.event
     def toggle_add_breeding_dialog(self, open: bool):
         self.show_add_breeding_dialog = open
+        if open:
+            self.add_breeding_error = ""
 
     @rx.event
     async def add_breeding_cycle(self, form_data: dict):
         """Adds a new breeding cycle."""
         cattle_id = form_data.get("cattle_id")
         if not cattle_id:
-            return rx.toast.error("Please select an animal.")
+            self.add_breeding_error = "Please select an animal."
+            return
         cattle_state = await self.get_state(CattleState)
         selected_cattle = next(
             (c for c in cattle_state.cattle_list if c["id"] == cattle_id), None
         )
         if not selected_cattle:
-            return rx.toast.error("Selected animal not found.")
-        insemination_date_str = form_data["insemination_date"]
-        insemination_date = datetime.date.fromisoformat(insemination_date_str)
+            self.add_breeding_error = "Selected animal not found."
+            return
+        insemination_date_str = str(form_data.get("insemination_date", "")).strip()
+        hormone_date_str = str(form_data.get("hormone_injection_date", "")).strip()
+        if not insemination_date_str:
+            self.add_breeding_error = "Insemination date is mandatory."
+            return
+        if not hormone_date_str:
+            self.add_breeding_error = "Hormone injection date is mandatory."
+            return
+        try:
+            insemination_date = datetime.date.fromisoformat(insemination_date_str)
+        except ValueError:
+            self.add_breeding_error = "Insemination date is invalid."
+            return
+        try:
+            datetime.date.fromisoformat(hormone_date_str)
+        except ValueError:
+            self.add_breeding_error = "Hormone injection date is invalid."
+            return
         gestation_days = 310 if selected_cattle["animal_type"] == "buffalo" else 280
         expected_calving_date = insemination_date + datetime.timedelta(
             days=gestation_days
@@ -169,7 +211,7 @@ class BreedingState(rx.State):
             "cattle_id": selected_cattle["id"],
             "cattle_name": selected_cattle["name"],
             "cattle_type": selected_cattle["animal_type"],
-            "hormone_injection_date": form_data["hormone_injection_date"],
+            "hormone_injection_date": hormone_date_str,
             "insemination_date": insemination_date_str,
             "expected_calving_date": expected_calving_date.isoformat(),
             "notes": form_data.get("notes"),
@@ -183,13 +225,15 @@ class BreedingState(rx.State):
             "calf_health": None,
             "birth_outcome": None,
             "created_date": datetime.date.today().isoformat(),
+            "farm_id": (await self.get_state(AuthState)).farm_id,
         }
         success = await crud.create_breeding_cycle(new_cycle)
         if success:
             self.breeding_cycles.append(new_cycle)
+            self.add_breeding_error = ""
             self.show_add_breeding_dialog = False
             return rx.toast.success("Breeding cycle started successfully!")
-        return rx.toast.error("Failed to start breeding cycle.")
+        self.add_breeding_error = "Failed to start breeding cycle. Please try again."
 
     @rx.event
     async def update_pregnancy_status(
@@ -206,10 +250,15 @@ class BreedingState(rx.State):
             if cycle["id"] == cycle_id:
                 self.breeding_cycles[i].update(updates)
                 break
+        self.show_pregnancy_confirmation_dialog = False
         return rx.toast.info("Pregnancy status updated.")
 
     @rx.event
     async def record_calving(self, cycle_id: str, form_data: dict):
+        birth_outcome = str(form_data.get("birth_outcome", "")).strip()
+        if not birth_outcome:
+            self.calving_error = "Please select a birth outcome."
+            return
         updates = {
             "calf_born": True,
             "calf_sex": form_data.get("calf_sex"),
@@ -228,6 +277,7 @@ class BreedingState(rx.State):
             and self.current_breeding_cycle["id"] == cycle_id
         ):
             self.current_breeding_cycle.update(updates)
+        self.calving_error = ""
         self.show_calving_record_dialog = False
         return rx.toast.success("Calving recorded successfully!")
 
@@ -244,6 +294,12 @@ class BreedingState(rx.State):
     @rx.event
     def set_filter(self, filter_value: str):
         self.selected_filter = filter_value
+
+    @rx.event
+    def set_view_mode(self, mode: str):
+        """Switch between the card grid and the AG Grid table view."""
+        if mode in ("cards", "table"):
+            self.view_mode = mode
 
     @rx.event
     def load_breeding_detail(self, **kwargs):

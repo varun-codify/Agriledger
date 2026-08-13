@@ -1,11 +1,10 @@
 import reflex as rx
+
+from app.components.cattle.cattle_profitability import cattle_profitability_section
+from app.components.layout import dashboard_layout
 from app.states.cattle_state import (
     CattleState,
-    MilkProduction,
-    VaccinationRecord,
-    HealthNote,
 )
-from app.components.layout import dashboard_layout
 
 
 def health_status_badge(status: rx.Var[str]) -> rx.Component:
@@ -58,7 +57,7 @@ def profile_action_button(
 
 
 def profile_tabs() -> rx.Component:
-    tabs = ["Overview", "Milk History", "Health Records", "Feed Records"]
+    tabs = ["Overview", "Milk History", "Health Records", "Feed Records", "Profitability"]
     return rx.el.div(
         rx.foreach(
             tabs,
@@ -178,9 +177,9 @@ def overview_tab_content() -> rx.Component:
                 "cake", "Age", CattleState.current_cattle["age"].to_string() + " years"
             ),
             metric_card(
-                "dollar-sign",
+                "indian-rupee",
                 "Purchase Price",
-                "$" + CattleState.current_cattle["purchase_price"].to_string(),
+                "₹" + CattleState.current_cattle["purchase_price"].to_string(),
             ),
             metric_card(
                 "calendar-days",
@@ -238,6 +237,18 @@ def milk_history_tab_content() -> rx.Component:
     )
 
 
+def _dialog_error_banner(error: rx.Var) -> rx.Component:
+    return rx.cond(
+        error != "",
+        rx.el.div(
+            rx.icon("triangle-alert", class_name="h-4 w-4 mr-2 flex-shrink-0"),
+            error,
+            class_name="flex items-start text-red-600 text-sm bg-red-50 border border-red-200 p-3 rounded-lg mt-3",
+        ),
+        None,
+    )
+
+
 def add_milk_dialog() -> rx.Component:
     return rx.cond(
         CattleState.show_milk_dialog,
@@ -250,6 +261,7 @@ def add_milk_dialog() -> rx.Component:
                 rx.el.h2(
                     "Add Milk Entry", class_name="text-xl font-bold text-stone-800"
                 ),
+                _dialog_error_banner(CattleState.dialog_error),
                 rx.el.form(
                     rx.el.div(
                         rx.el.label("Date", class_name="text-sm font-medium"),
@@ -291,9 +303,8 @@ def add_milk_dialog() -> rx.Component:
                         class_name="flex justify-end gap-4",
                     ),
                     on_submit=CattleState.add_milk_entry,
-                    reset_on_submit=True,
                 ),
-                class_name="bg-white p-8 rounded-2xl shadow-xl w-full max-w-lg z-50",
+                class_name="bg-white p-8 rounded-2xl shadow-xl w-full max-w-lg z-50 max-h-[90vh] overflow-y-auto",
             ),
             class_name="fixed inset-0 flex items-center justify-center p-4 z-50",
         ),
@@ -312,6 +323,7 @@ def add_vaccination_dialog() -> rx.Component:
                 rx.el.h2(
                     "Record Vaccination", class_name="text-xl font-bold text-stone-800"
                 ),
+                _dialog_error_banner(CattleState.dialog_error),
                 rx.el.form(
                     rx.el.div(
                         rx.el.label("Vaccine Name", class_name="text-sm font-medium"),
@@ -349,7 +361,7 @@ def add_vaccination_dialog() -> rx.Component:
                         rx.el.textarea(
                             name="notes", class_name="mt-1 w-full p-2 border rounded-md"
                         ),
-                        class_name="grid grid-cols-2 gap-4 my-6",
+                        class_name="grid grid-cols-1 sm:grid-cols-2 gap-4 my-6",
                     ),
                     rx.el.div(
                         rx.el.button(
@@ -367,9 +379,8 @@ def add_vaccination_dialog() -> rx.Component:
                         class_name="flex justify-end gap-4",
                     ),
                     on_submit=CattleState.add_vaccination_record,
-                    reset_on_submit=True,
                 ),
-                class_name="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl z-50",
+                class_name="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl z-50 max-h-[90vh] overflow-y-auto",
             ),
             class_name="fixed inset-0 flex items-center justify-center p-4 z-50",
         ),
@@ -388,6 +399,7 @@ def add_health_note_dialog() -> rx.Component:
                 rx.el.h2(
                     "Add Health Note", class_name="text-xl font-bold text-stone-800"
                 ),
+                _dialog_error_banner(CattleState.dialog_error),
                 rx.el.form(
                     rx.el.div(
                         rx.el.label("Date", class_name="text-sm font-medium"),
@@ -413,7 +425,7 @@ def add_health_note_dialog() -> rx.Component:
                             placeholder="Observations about health or behavior...",
                             class_name="mt-1 w-full p-2 border rounded-md col-span-2 h-24",
                         ),
-                        class_name="grid grid-cols-2 gap-4 my-6",
+                        class_name="grid grid-cols-1 sm:grid-cols-2 gap-4 my-6",
                     ),
                     rx.el.div(
                         rx.el.button(
@@ -431,9 +443,8 @@ def add_health_note_dialog() -> rx.Component:
                         class_name="flex justify-end gap-4",
                     ),
                     on_submit=CattleState.add_health_note,
-                    reset_on_submit=True,
                 ),
-                class_name="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl z-50",
+                class_name="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl z-50 max-h-[90vh] overflow-y-auto",
             ),
             class_name="fixed inset-0 flex items-center justify-center p-4 z-50",
         ),
@@ -502,6 +513,7 @@ def cattle_profile_content() -> rx.Component:
                 ("Milk History", milk_history_tab_content()),
                 ("Health Records", health_timeline()),
                 ("Feed Records", rx.el.p("Feed records will be shown here.")),
+                ("Profitability", cattle_profitability_section()),
                 rx.el.p("Select a tab"),
             ),
             class_name="mt-6",

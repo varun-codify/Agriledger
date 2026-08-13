@@ -1,4 +1,5 @@
 import reflex as rx
+
 from app.states.transaction_state import TransactionState
 
 
@@ -8,7 +9,7 @@ def quick_add_dialog() -> rx.Component:
         rx.el.button(
             rx.icon("plus", class_name="h-7 w-7"),
             on_click=lambda: TransactionState.toggle_quick_add(True),
-            class_name="fixed bottom-6 right-6 bg-emerald-500 text-white p-4 rounded-full shadow-lg hover:bg-emerald-600 transition-transform hover:scale-105 z-30",
+            class_name="fixed bottom-24 right-4 md:bottom-6 md:right-6 bg-emerald-500 text-white p-4 rounded-full shadow-lg hover:bg-emerald-600 transition-transform hover:scale-105 z-30",
         ),
         rx.cond(
             TransactionState.show_quick_add,
@@ -32,7 +33,7 @@ def quick_add_dialog() -> rx.Component:
                     rx.el.div(
                         rx.el.button(
                             "Income",
-                            on_click=lambda: TransactionState.set_transaction_type(
+                            on_click=lambda: TransactionState.quick_add_set_type(
                                 "income"
                             ),
                             class_name=rx.cond(
@@ -43,7 +44,7 @@ def quick_add_dialog() -> rx.Component:
                         ),
                         rx.el.button(
                             "Expense",
-                            on_click=lambda: TransactionState.set_transaction_type(
+                            on_click=lambda: TransactionState.quick_add_set_type(
                                 "expense"
                             ),
                             class_name=rx.cond(
@@ -55,7 +56,7 @@ def quick_add_dialog() -> rx.Component:
                         class_name="grid grid-cols-2 gap-2 mb-4",
                     ),
                     rx.el.div(
-                        rx.el.span("$", class_name="text-2xl font-bold text-stone-400"),
+                        rx.el.span("₹", class_name="text-2xl font-bold text-stone-400"),
                         rx.el.p(
                             TransactionState.amount_str,
                             class_name="text-4xl font-bold text-stone-800",
@@ -135,7 +136,9 @@ def quick_add_dialog() -> rx.Component:
                             lambda cat: rx.el.button(
                                 rx.icon(cat["icon"], class_name="h-5 w-5 mr-2"),
                                 cat["name"],
-                                on_click=lambda: TransactionState.set_category(cat),
+                                on_click=lambda: TransactionState.quick_add_set_category(
+                                    cat
+                                ),
                                 class_name=rx.cond(
                                     TransactionState.selected_category["name"]
                                     == cat["name"],

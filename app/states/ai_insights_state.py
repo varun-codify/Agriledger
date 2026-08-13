@@ -1,16 +1,26 @@
-import reflex as rx
-import os
-import openai
-import logging
+"""AI-powered farm insights and conversational assistant.
+
+Uses Google Gemini via the modern `google.genai` package, with an
+intelligent rule-based fallback so the app keeps working without an API key.
+"""
+
 import datetime
 import json
-from app.states.transaction_state import TransactionState
+import logging
+
+import reflex as rx
+from google import genai
+from google.genai import types
+
+from app.config import config
+from app.services.gemini_service import extract_json, retry_across_models
 from app.states.cattle_state import CattleState
 from app.states.crop_state import CropState
+from app.states.transaction_state import TransactionState
 
 
 class AIInsightsState(rx.State):
-    """Manages AI-powered insights using OpenAI or intelligent rule-based logic."""
+    """Manages AI-powered insights using Gemini or intelligent rule-based logic."""
 
     health_score: int = 85
     recommendations: list[dict] = [
@@ -30,6 +40,112 @@ class AIInsightsState(rx.State):
         "Check vaccination schedules for calves.",
     ]
     is_loading: bool = False
+
+    # Chatbot state
+    chat_messages: list[dict] = []
+    chat_input: str = ""
+    chat_loading: bool = False
+
+    def _client(self) -> genai.Client:
+        """Build a Gemini client for the configured API key."""
+        return genai.Client(api_key=config.gemini.api_key)
+
+    @rx.event
+    def set_chat_input(self, value: str):
+        self.chat_input = value
+
+    @rx.event
+    def handle_chat_key(self, key: str):
+        if key == "Enter":
+            self.send_chat_message()
+
+    @rx.event
+    def ask_question(self, question: str):
+        self.chat_input = question
+        self.send_chat_message()
+
+    @rx.event(background=True)
+    async def send_chat_message(self):
+        """Send a message to the AI chatbot and get a response."""
+        if not self.chat_input.strip():
+            return
+        user_msg = self.chat_input.strip()
+        async with self:
+            self.chat_messages.append({"role": "user", "content": user_msg})
+            self.chat_input = ""
+            self.chat_loading = True
+
+        # Gather farm context
+        ts = await self.get_state(TransactionState)
+        cs = await self.get_state(CattleState)
+        crops = await self.get_state(CropState)
+
+        total_income = sum(float(t["amount"]) for t in ts.transactions if t["type"] == "income")
+        total_expense = sum(float(t["amount"]) for t in ts.transactions if t["type"] == "expense")
+        total_animals = len(cs.cattle_list)
+        sick_animals = sum(1 for c in cs.cattle_list if c.get("health_status") in ["Sick", "Under Treatment"])
+        active_crops = len([c for c in crops.crops_list if c["status"] == "Growing"])
+
+        farm_context = (
+            f"Farm data: Total income=₹{total_income:,.2f}, Total expenses=₹{total_expense:,.2f}, "
+            f"Net profit=₹{total_income - total_expense:,.2f}. "
+            f"Animals: {total_animals} total ({sick_animals} sick). "
+            f"Active crops: {active_crops}. "
+            f"Milk sales this month: {len(ts.milk_sales)}, Coconut sales: {len(ts.coconut_sales)}. "
+            f"Current month: {datetime.datetime.now().strftime('%B %Y')}."
+        )
+
+        bot_reply = None
+        if config.gemini.is_configured:
+            try:
+                client = self._client()
+
+                async def _run_chat(model: str):
+                    chat = client.aio.chats.create(
+                        model=model,
+                        config=types.GenerateContentConfig(
+                            system_instruction=(
+                                "You are AgriLedger AI, a helpful farm management assistant. "
+                                "Answer questions about the farmer's data concisely and practically. "
+                                "Give specific, actionable advice. Keep responses under 100 words. "
+                                f"Context: {farm_context}"
+                            )
+                        ),
+                    )
+                    response = await chat.send_message(user_msg)
+                    return response.text.strip() if response.text else None
+
+                bot_reply = await retry_across_models(_run_chat)
+            except Exception as e:
+                logging.exception(f"AI chat failed: {e}")
+                bot_reply = None
+        if not bot_reply:
+            bot_reply = self._rule_based_response(
+                user_msg, total_income, total_expense, sick_animals, total_animals
+            )
+
+        async with self:
+            self.chat_messages.append({"role": "assistant", "content": bot_reply})
+            self.chat_loading = False
+
+    def _rule_based_response(self, question: str, income: float, expense: float, sick: int, total: int) -> str:
+        """Fallback rule-based responses when Gemini is not available."""
+        q = question.lower()
+        profit = income - expense
+        if "milk" in q and "drop" in q:
+            return "Milk production drops can be caused by: heat stress, inadequate feed nutrition, dehydration, or health issues. Check your animals' health status and ensure they have adequate water and balanced feed."
+        elif "feed cost" in q or "reduce" in q and "cost" in q:
+            return f"Your current expenses are ₹{expense:,.2f}. To reduce feed costs: consider buying in bulk, growing your own fodder, optimizing feed ratios based on animal needs, and reducing waste."
+        elif "crop" in q and "plant" in q:
+            return "Choose crops based on your soil type, climate, and water availability. Consider crop rotation to maintain soil health. Local agricultural extension offices can provide region-specific recommendations."
+        elif "profit" in q or "income" in q:
+            return f"Your current net profit is ₹{profit:,.2f} (Income: ₹{income:,.2f}, Expenses: ₹{expense:,.2f}). {'This is healthy!' if profit > 0 else 'Expenses exceed income - review your spending categories.'}"
+        elif "health" in q or "sick" in q:
+            return f"You have {sick} sick animals out of {total}. {'Please check on them immediately and consult a veterinarian.' if sick > 0 else 'All animals appear healthy. Keep up with regular vaccinations.'}"
+        elif "breeding" in q:
+            return "Breeding success depends on: proper heat detection, timely insemination, nutrition, and health. Ensure cows are in good body condition (BCS 3-3.5) before breeding."
+        else:
+            return f"Based on your farm data: You have {total} animals, ₹{income:,.2f} income, and ₹{expense:,.2f} in expenses. For specific advice, try asking about milk production, feed costs, animal health, or crop planning."
 
     @rx.event(background=True)
     async def refresh_insights(self):
@@ -80,10 +196,9 @@ class AIInsightsState(rx.State):
         new_recs = []
         new_tips = []
         ai_success = False
-        api_key = os.getenv("OPENAI_API_KEY")
-        if api_key:
+        if config.gemini.is_configured:
             try:
-                client = openai.AsyncOpenAI(api_key=api_key)
+                client = self._client()
                 context = {
                     "financial": {"income": total_income, "expense": total_expense},
                     "cattle": {
@@ -94,19 +209,46 @@ class AIInsightsState(rx.State):
                     "crops": {"count": len(crops.crops_list), "active": active_crops},
                     "month": datetime.datetime.now().strftime("%B"),
                 }
-                prompt = f'\n                Analyze this farm data: {json.dumps(context)}\n                Provide 3 concise insights/recommendations in JSON format.\n                JSON keys: "recommendations" (list of objects with "title", "desc", "type") and "seasonal_tips" (list of strings).\n                Type options: "optimization", "warning", "opportunity", "info".\n                Keep descriptions under 15 words.\n                '
-                response = await client.chat.completions.create(
-                    model="gpt-3.5-turbo-0125",
-                    messages=[{"role": "user", "content": prompt}],
-                    response_format={"type": "json_object"},
-                    max_tokens=300,
+                prompt = (
+                    f"Analyze this farm data: {json.dumps(context)}\n"
+                    "Provide 3 concise insights/recommendations in JSON format.\n"
+                    'JSON keys: "recommendations" (list of objects with "title", "desc", "type") and "seasonal_tips" (list of strings).\n'
+                    'Type must be exactly one of: "optimization", "warning", "opportunity", "info".\n'
+                    "Keep descriptions under 15 words. Use Indian Rupees (₹), never $."
                 )
-                result = json.loads(response.choices[0].message.content)
-                if "recommendations" in result:
-                    new_recs = result["recommendations"]
-                if "seasonal_tips" in result:
-                    new_tips = result["seasonal_tips"]
-                ai_success = True
+                async def _run_insights(model: str):
+                    return await client.aio.models.generate_content(
+                        model=model,
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            response_mime_type="application/json"
+                        ),
+                    )
+
+                response = await retry_across_models(_run_insights)
+                if response:
+                    result = extract_json(response.text) or {}
+                    # Defensive: the model is asked for a JSON object, but guard
+                    # every nested value so a wrong shape can never crash the UI.
+                    raw_recs = result.get("recommendations")
+                    if isinstance(raw_recs, list):
+                        new_recs = [
+                            {
+                                **rec,
+                                "type": (
+                                    rec.get("type")
+                                    if rec.get("type")
+                                    in ("optimization", "warning", "opportunity", "info")
+                                    else "info"
+                                ),
+                            }
+                            for rec in raw_recs
+                            if isinstance(rec, dict)
+                        ]
+                    raw_tips = result.get("seasonal_tips")
+                    if isinstance(raw_tips, list):
+                        new_tips = [str(t) for t in raw_tips if t]
+                    ai_success = bool(result)
             except Exception as e:
                 logging.exception(
                     f"AI Insights generation failed, falling back to rules: {e}"

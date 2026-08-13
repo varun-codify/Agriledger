@@ -40,3 +40,16 @@ assets/external/
 # OS files
 Thumbs.db
 .DS_Store
+
+# Virtual environments & local tooling
+.venv/
+.kilo/
+
+# Generated / runtime artifacts
+uploaded_files/
+.pytest_cache/
+.ruff_cache/
+
+# Keep only README.md; all other markdown is excluded
+*.md
+!README.md

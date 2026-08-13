@@ -1,5 +1,4 @@
 import reflex as rx
-from app.states.auth_state import AuthState
 
 
 class SettingsState(rx.State):
@@ -13,6 +12,7 @@ class SettingsState(rx.State):
     farm_name: str = "My Green Farm"
     farm_location: str = "Springfield"
     farm_size: str = "50 Acres"
+    settings_error: str = ""
 
     @rx.event
     def toggle_theme(self):
@@ -33,13 +33,28 @@ class SettingsState(rx.State):
 
     @rx.event
     def update_farm_details(self, form_data: dict):
-        self.farm_name = form_data.get("farm_name", self.farm_name)
-        self.farm_location = form_data.get("farm_location", self.farm_location)
-        self.farm_size = form_data.get("farm_size", self.farm_size)
+        farm_name = str(form_data.get("farm_name", "")).strip()
+        farm_location = str(form_data.get("farm_location", "")).strip()
+        farm_size = str(form_data.get("farm_size", "")).strip()
+        if not farm_name:
+            self.settings_error = "Farm name is required."
+            return
+        if not farm_location:
+            self.settings_error = "Farm location is required."
+            return
+        self.farm_name = farm_name
+        self.farm_location = farm_location
+        self.farm_size = farm_size
+        self.settings_error = ""
         return rx.toast.success("Farm details updated successfully!")
 
     @rx.event
     async def update_profile(self, form_data: dict):
+        name = str(form_data.get("name", "")).strip()
+        if not name:
+            self.settings_error = "Full name is required."
+            return
+        self.settings_error = ""
         return rx.toast.success("Profile updated successfully!")
 
     @rx.event

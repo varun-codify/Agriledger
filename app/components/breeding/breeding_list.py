@@ -1,4 +1,7 @@
 import reflex as rx
+
+from app.components.breeding.breeding_table import breeding_grid
+from app.components.common import segmented_control
 from app.states.breeding_state import BreedingState
 from app.states.cattle_state import CattleState
 
@@ -84,6 +87,15 @@ def filter_tabs() -> rx.Component:
     )
 
 
+def view_toggle() -> rx.Component:
+    """Segmented control to switch between the card grid and the table view."""
+    return segmented_control(
+        BreedingState.view_mode,
+        [("cards", "Cards", "layout-grid"), ("table", "Table", "table")],
+        BreedingState.set_view_mode,
+    )
+
+
 def alert_item(icon: str, title: str, items: rx.Var[list], color: str) -> rx.Component:
     return rx.el.div(
         rx.el.h4(
@@ -140,6 +152,17 @@ def add_breeding_dialog() -> rx.Component:
                 rx.el.h2(
                     "Start New Breeding Cycle",
                     class_name="text-2xl font-bold text-stone-800",
+                ),
+                rx.cond(
+                    BreedingState.add_breeding_error != "",
+                    rx.el.div(
+                        rx.icon(
+                            "triangle-alert", class_name="h-4 w-4 mr-2 flex-shrink-0"
+                        ),
+                        BreedingState.add_breeding_error,
+                        class_name="flex items-start text-red-600 text-sm bg-red-50 border border-red-200 p-3 rounded-lg mt-3",
+                    ),
+                    None,
                 ),
                 rx.el.form(
                     rx.el.div(
@@ -198,9 +221,8 @@ def add_breeding_dialog() -> rx.Component:
                         class_name="flex gap-4 mt-6",
                     ),
                     on_submit=BreedingState.add_breeding_cycle,
-                    reset_on_submit=True,
                 ),
-                class_name="bg-white p-8 rounded-2xl shadow-xl w-full max-w-lg z-50",
+                class_name="bg-white p-8 rounded-2xl shadow-xl w-full max-w-lg z-50 max-h-[90vh] overflow-y-auto",
             ),
             class_name="fixed inset-0 flex items-center justify-center p-4 z-50",
         ),
@@ -213,17 +235,27 @@ def breeding_list_page() -> rx.Component:
         breeding_alerts_section(),
         rx.el.div(
             filter_tabs(),
-            rx.el.button(
-                rx.icon("plus", class_name="h-4 w-4 mr-2"),
-                "New Breeding Cycle",
-                on_click=lambda: BreedingState.toggle_add_breeding_dialog(True),
-                class_name="flex items-center bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-emerald-600 transition-all",
+            rx.el.div(
+                view_toggle(),
+                rx.el.button(
+                    rx.icon("plus", class_name="h-4 w-4 mr-2"),
+                    "New Breeding Cycle",
+                    on_click=lambda: BreedingState.toggle_add_breeding_dialog(True),
+                    class_name="flex items-center bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-emerald-600 transition-all",
+                ),
+                class_name="flex items-center gap-3",
             ),
-            class_name="flex items-center justify-between mb-6",
+            class_name="flex items-center justify-between mb-6 flex-wrap gap-4",
         ),
-        rx.el.div(
-            rx.foreach(BreedingState.filtered_breeding_cycles, breeding_cycle_card),
-            class_name="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6",
+        rx.cond(
+            BreedingState.view_mode == "table",
+            breeding_grid(row_data=BreedingState.filtered_breeding_cycles),
+            rx.el.div(
+                rx.foreach(
+                    BreedingState.filtered_breeding_cycles, breeding_cycle_card
+                ),
+                class_name="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6",
+            ),
         ),
         add_breeding_dialog(),
     )

@@ -1,4 +1,5 @@
 import reflex as rx
+
 from app.states.crop_state import CropState
 
 
@@ -85,6 +86,17 @@ def add_crop_dialog() -> rx.Component:
                     "Enter the details for your new crop entry.",
                     class_name="text-stone-500 text-sm mb-6",
                 ),
+                rx.cond(
+                    CropState.add_crop_error != "",
+                    rx.el.div(
+                        rx.icon(
+                            "triangle-alert", class_name="h-4 w-4 mr-2 flex-shrink-0"
+                        ),
+                        CropState.add_crop_error,
+                        class_name="flex items-start text-red-600 text-sm bg-red-50 border border-red-200 p-3 rounded-lg mb-4",
+                    ),
+                    None,
+                ),
                 rx.el.form(
                     rx.el.div(
                         rx.el.label("Crop Name", class_name="text-sm font-medium"),
@@ -118,7 +130,7 @@ def add_crop_dialog() -> rx.Component:
                             placeholder="e.g., 500.00 for seeds",
                             class_name="mt-1 w-full p-2 border rounded-md",
                         ),
-                        class_name="grid grid-cols-2 gap-4",
+                        class_name="grid grid-cols-1 sm:grid-cols-2 gap-4",
                     ),
                     rx.el.div(
                         rx.el.button(
@@ -135,9 +147,8 @@ def add_crop_dialog() -> rx.Component:
                         class_name="flex gap-4 mt-6",
                     ),
                     on_submit=CropState.add_crop,
-                    reset_on_submit=True,
                 ),
-                class_name="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl z-50",
+                class_name="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl z-50 max-h-[90vh] overflow-y-auto",
             ),
             class_name="fixed inset-0 flex items-center justify-center p-4 z-50",
         ),
@@ -161,9 +172,9 @@ def crop_management_page() -> rx.Component:
                 "bg-blue-100 text-blue-600",
             ),
             crop_summary_card(
-                "dollar-sign",
+                "indian-rupee",
                 "Total Investment",
-                f"${CropState.total_investment}",
+                f"₹{CropState.total_investment}",
                 "bg-yellow-100 text-yellow-600",
             ),
             class_name="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6",

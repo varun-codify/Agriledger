@@ -1,11 +1,12 @@
-import reflex as rx
-from typing import TypedDict, Literal
 import datetime
-import uuid
 import logging
-from collections import defaultdict
+import uuid
+
+import reflex as rx
+
 from app.database import crud
-from app.database.models import Cattle, MilkProduction, VaccinationRecord, HealthNote
+from app.states.auth_state import AuthState
+from app.database.models import Cattle, HealthNote, MilkProduction, VaccinationRecord
 
 
 class CattleState(rx.State):
@@ -55,6 +56,7 @@ class CattleState(rx.State):
             "mother_id": None,
             "weight": 550.0,
             "is_active": True,
+            "farm_id": "demo-farm",
         },
         {
             "id": "c2",
@@ -81,6 +83,7 @@ class CattleState(rx.State):
             "mother_id": None,
             "weight": 680.0,
             "is_active": True,
+            "farm_id": "demo-farm",
         },
         {
             "id": "s1",
@@ -101,6 +104,7 @@ class CattleState(rx.State):
             "mother_id": None,
             "weight": 80.0,
             "is_active": True,
+            "farm_id": "demo-farm",
         },
         {
             "id": "s2",
@@ -121,6 +125,7 @@ class CattleState(rx.State):
             "mother_id": "s1",
             "weight": 15.0,
             "is_active": True,
+            "farm_id": "demo-farm",
         },
         {
             "id": "g1",
@@ -141,6 +146,7 @@ class CattleState(rx.State):
             "mother_id": None,
             "weight": 70.0,
             "is_active": True,
+            "farm_id": "demo-farm",
         },
         {
             "id": "p1",
@@ -161,6 +167,7 @@ class CattleState(rx.State):
             "mother_id": None,
             "weight": 2.5,
             "is_active": True,
+            "farm_id": "demo-farm",
         },
         {
             "id": "p2",
@@ -181,6 +188,7 @@ class CattleState(rx.State):
             "mother_id": "p1",
             "weight": 0.2,
             "is_active": True,
+            "farm_id": "demo-farm",
         },
     ]
     show_add_cattle_dialog: bool = False
@@ -193,6 +201,9 @@ class CattleState(rx.State):
     profile_loading: bool = True
     current_cattle: Cattle | None = None
     animal_type_filter: str = "all"
+    view_mode: str = "cards"  # "cards" | "table"
+    add_cattle_error: str = ""
+    dialog_error: str = ""
 
     def _reset_form_fields(self):
         self.new_cattle_date = datetime.date.today().isoformat()
@@ -202,27 +213,80 @@ class CattleState(rx.State):
         self.show_add_cattle_dialog = open
         if not open:
             self._reset_form_fields()
+        self.add_cattle_error = ""
 
     @rx.event
     async def fetch_cattle_list(self):
-        """Fetches cattle list from DB."""
-        crud.init_database_seeds({"cattle": self.DEMO_CATTLE_DATA})
-        self.cattle_list = await crud.get_all_cattle()
+        """Fetches cattle list from DB (seeds demo data per-farm if empty)."""
+        auth = await self.get_state(AuthState)
+        await crud.ensure_farm_seed("cattle", auth.farm_id, self.DEMO_CATTLE_DATA)
+        self.cattle_list = await crud.get_all_cattle(farm_id=auth.farm_id)
 
     @rx.event
     async def add_cattle(self, form_data: dict):
         """Adds a new cattle to the list."""
+        # Validate each field with a clear message; never clear the form on error.
+        name = str(form_data.get("name", "")).strip()
+        tag_number = str(form_data.get("tag_number", "")).strip()
+        animal_type = str(form_data.get("animal_type", "")).strip()
+        breed = str(form_data.get("breed", "")).strip()
+        age_raw = str(form_data.get("age", "")).strip()
+        weight_raw = str(form_data.get("weight", "")).strip()
+        price_raw = str(form_data.get("purchase_price", "")).strip()
+        purchase_date = str(form_data.get("purchase_date", "")).strip()
+
+        if not name:
+            self.add_cattle_error = "Name is required."
+            return
+        if not tag_number:
+            self.add_cattle_error = "Tag number is required."
+            return
+        if not animal_type:
+            self.add_cattle_error = "Please select an animal type."
+            return
+        if not age_raw:
+            self.add_cattle_error = "Age is mandatory."
+            return
+        if not purchase_date:
+            self.add_cattle_error = "Purchase date is mandatory."
+            return
         try:
+            age = int(age_raw)
+            if age < 0:
+                self.add_cattle_error = "Age cannot be negative."
+                return
+        except ValueError:
+            self.add_cattle_error = "Age must be a valid whole number."
+            return
+
+        weight = None
+        if weight_raw:
+            try:
+                weight = float(weight_raw)
+            except ValueError:
+                self.add_cattle_error = "Weight must be a valid number."
+                return
+
+        purchase_price = 0.0
+        if price_raw:
+            try:
+                purchase_price = float(price_raw)
+            except ValueError:
+                self.add_cattle_error = "Purchase price must be a valid number."
+                return
+
+        try:
+            auth = await self.get_state(AuthState)
             new_cattle: Cattle = {
                 "id": str(uuid.uuid4()),
-                "name": form_data["name"],
-                "animal_type": form_data["animal_type"],
-                "tag_number": form_data["tag_number"],
-                "age": int(form_data["age"]),
-                "breed": form_data["breed"],
-                "purchase_date": form_data["purchase_date"],
-                "purchase_price": float(form_data["purchase_price"]),
-                "image_url": f"https://api.dicebear.com/9.x/notionists/svg?seed={form_data['name']}",
+                "name": name,
+                "animal_type": animal_type,
+                "tag_number": tag_number,
+                "age": age,
+                "breed": breed,
+                "purchase_date": purchase_date,
+                "purchase_price": purchase_price,
+                "image_url": f"https://api.dicebear.com/9.x/notionists/svg?seed={name}",
                 "health_status": "Healthy",
                 "milk_production": [],
                 "vaccinations": [],
@@ -230,21 +294,21 @@ class CattleState(rx.State):
                 "is_juvenile": form_data.get("is_juvenile", False),
                 "parent_id": form_data.get("parent_id"),
                 "mother_id": form_data.get("mother_id"),
-                "weight": float(form_data.get("weight"))
-                if form_data.get("weight")
-                else None,
+                "weight": weight,
                 "is_active": True,
+                "farm_id": auth.farm_id,
             }
             success = await crud.create_cattle(new_cattle)
             if success:
                 self.cattle_list.append(new_cattle)
+                self.add_cattle_error = ""
                 self.toggle_add_cattle_dialog(False)
                 return rx.toast.success("Animal added successfully!")
             else:
-                return rx.toast.error("Failed to save animal to database.")
+                self.add_cattle_error = "Failed to save animal to database. Please try again."
         except (ValueError, KeyError) as e:
             logging.exception(f"Error adding animal: {e}")
-            return rx.toast.error(f"Invalid data: Please check all fields. {e}")
+            self.add_cattle_error = "Something went wrong while saving. Please check your inputs."
 
     @rx.var
     def total_cattle(self) -> int:
@@ -336,9 +400,37 @@ class CattleState(rx.State):
     def active_animals(self) -> list[Cattle]:
         return [c for c in self.cattle_list if c["is_active"]]
 
+    @rx.var
+    def cattle_profitability_data(self) -> list[dict]:
+        """Pre-compute profitability for each animal."""
+        result = []
+        for c in self.cattle_list:
+            total_milk = sum(r["liters"] for r in c.get("milk_production", []))
+            estimated_revenue = total_milk * 5.0
+            purchase_cost = c.get("purchase_price", 0)
+            profit = estimated_revenue - purchase_cost
+            result.append({
+                "id": c["id"],
+                "name": c["name"],
+                "animal_type": c["animal_type"],
+                "image_url": c["image_url"],
+                "total_milk": f"{total_milk:.1f}",
+                "revenue": f"₹{estimated_revenue:,.0f}",
+                "cost": f"₹{purchase_cost:,.0f}",
+                "profit": f"₹{profit:,.0f}",
+                "profit_positive": profit >= 0,
+            })
+        return result
+
     @rx.event
     def set_animal_filter(self, filter: str):
         self.animal_type_filter = filter
+
+    @rx.event
+    def set_view_mode(self, mode: str):
+        """Switch between the card grid and the AG Grid table view."""
+        if mode in ("cards", "table"):
+            self.view_mode = mode
 
     @rx.var
     def filtered_cattle(self) -> list[Cattle]:
@@ -381,11 +473,14 @@ class CattleState(rx.State):
 
     @rx.var
     def days_owned(self) -> int:
-        if not self.current_cattle:
+        if not self.current_cattle or not self.current_cattle.get("purchase_date"):
             return 0
-        purchase_date = datetime.date.fromisoformat(
-            self.current_cattle["purchase_date"]
-        )
+        try:
+            purchase_date = datetime.date.fromisoformat(
+                self.current_cattle["purchase_date"]
+            )
+        except ValueError:
+            return 0
         return (datetime.date.today() - purchase_date).days
 
     @rx.var
@@ -436,51 +531,61 @@ class CattleState(rx.State):
     def toggle_milk_dialog(self, open: bool):
         self.show_milk_dialog = open
         self.current_dialog_date = datetime.date.today().isoformat()
+        self.dialog_error = ""
 
     @rx.event
     def toggle_vaccination_dialog(self, open: bool):
         self.show_vaccination_dialog = open
         self.current_dialog_date = datetime.date.today().isoformat()
+        self.dialog_error = ""
 
     @rx.event
     def toggle_health_note_dialog(self, open: bool):
         self.show_health_note_dialog = open
         self.current_dialog_date = datetime.date.today().isoformat()
+        self.dialog_error = ""
 
     @rx.event
     async def add_milk_entry(self, form_data: dict):
         if not self.current_cattle:
             return rx.toast.error("No cattle selected.")
+        liters_raw = str(form_data.get("liters", "")).strip()
+        if not liters_raw:
+            self.dialog_error = "Liters is mandatory."
+            return
         try:
-            liters = float(form_data["liters"])
+            liters = float(liters_raw)
             if liters <= 0:
-                return rx.toast.error("Liters must be a positive number.")
-            new_entry: MilkProduction = {
-                "date": form_data["date"],
-                "liters": liters,
-                "notes": form_data.get("notes"),
-            }
-            self.current_cattle["milk_production"].insert(0, new_entry)
-            await crud.update_cattle(
-                self.current_cattle["id"],
-                {"milk_production": self.current_cattle["milk_production"]},
-            )
-            for i, c in enumerate(self.cattle_list):
-                if c["id"] == self.current_cattle["id"]:
-                    self.cattle_list[i] = self.current_cattle
-                    break
-            self.toggle_milk_dialog(False)
-            return rx.toast.success("Milk entry added!")
-        except ValueError as e:
-            logging.exception(f"Error adding milk entry: {e}")
-            return rx.toast.error("Invalid input for liters.")
+                self.dialog_error = "Liters must be a positive number."
+                return
+        except ValueError:
+            self.dialog_error = "Liters must be a valid number."
+            return
+        new_entry: MilkProduction = {
+            "date": form_data["date"],
+            "liters": liters,
+            "notes": form_data.get("notes"),
+        }
+        self.current_cattle["milk_production"].insert(0, new_entry)
+        await crud.update_cattle(
+            self.current_cattle["id"],
+            {"milk_production": self.current_cattle["milk_production"]},
+        )
+        for i, c in enumerate(self.cattle_list):
+            if c["id"] == self.current_cattle["id"]:
+                self.cattle_list[i] = self.current_cattle
+                break
+        self.dialog_error = ""
+        self.toggle_milk_dialog(False)
+        return rx.toast.success("Milk entry added!")
 
     @rx.event
     async def add_vaccination_record(self, form_data: dict):
         if not self.current_cattle:
             return rx.toast.error("No cattle selected.")
-        if not form_data.get("vaccine_name"):
-            return rx.toast.error("Vaccine name is required.")
+        if not str(form_data.get("vaccine_name", "")).strip():
+            self.dialog_error = "Vaccine name is required."
+            return
         new_record: VaccinationRecord = {
             "date": form_data["date"],
             "vaccine_name": form_data["vaccine_name"],
@@ -502,6 +607,7 @@ class CattleState(rx.State):
             if c["id"] == self.current_cattle["id"]:
                 self.cattle_list[i] = self.current_cattle
                 break
+        self.dialog_error = ""
         self.toggle_vaccination_dialog(False)
         return rx.toast.success("Vaccination record added!")
 
@@ -509,8 +615,9 @@ class CattleState(rx.State):
     async def add_health_note(self, form_data: dict):
         if not self.current_cattle:
             return rx.toast.error("No cattle selected.")
-        if not form_data.get("note"):
-            return rx.toast.error("Note is required.")
+        if not str(form_data.get("note", "")).strip():
+            self.dialog_error = "Note is required."
+            return
         new_note: HealthNote = {
             "date": form_data["date"],
             "note": form_data["note"],
@@ -525,5 +632,6 @@ class CattleState(rx.State):
             if c["id"] == self.current_cattle["id"]:
                 self.cattle_list[i] = self.current_cattle
                 break
+        self.dialog_error = ""
         self.toggle_health_note_dialog(False)
         return rx.toast.success("Health note added!")

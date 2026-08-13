@@ -1,6 +1,7 @@
 import reflex as rx
-from app.states.crop_state import CropState
+
 from app.components.layout import dashboard_layout
+from app.states.crop_state import CropState
 
 
 def status_badge(status: rx.Var[str]) -> rx.Component:
@@ -83,6 +84,17 @@ def add_activity_dialog() -> rx.Component:
                 rx.el.h2(
                     "Add Crop Activity", class_name="text-xl font-bold text-stone-800"
                 ),
+                rx.cond(
+                    CropState.dialog_error != "",
+                    rx.el.div(
+                        rx.icon(
+                            "triangle-alert", class_name="h-4 w-4 mr-2 flex-shrink-0"
+                        ),
+                        CropState.dialog_error,
+                        class_name="flex items-start text-red-600 text-sm bg-red-50 border border-red-200 p-3 rounded-lg mt-3",
+                    ),
+                    None,
+                ),
                 rx.el.form(
                     rx.el.div(
                         rx.el.label("Date", class_name="text-sm font-medium"),
@@ -117,7 +129,7 @@ def add_activity_dialog() -> rx.Component:
                             name="notes",
                             class_name="mt-1 w-full p-2 border rounded-md col-span-2 h-20",
                         ),
-                        class_name="grid grid-cols-2 gap-4 my-6",
+                        class_name="grid grid-cols-1 sm:grid-cols-2 gap-4 my-6",
                     ),
                     rx.el.div(
                         rx.el.button(
@@ -136,9 +148,8 @@ def add_activity_dialog() -> rx.Component:
                         class_name="flex justify-end gap-4",
                     ),
                     on_submit=CropState.add_activity,
-                    reset_on_submit=True,
                 ),
-                class_name="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl z-50",
+                class_name="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl z-50 max-h-[90vh] overflow-y-auto",
             ),
             class_name="fixed inset-0 flex items-center justify-center p-4 z-50",
         ),
@@ -156,6 +167,17 @@ def add_harvest_dialog() -> rx.Component:
             rx.el.div(
                 rx.el.h2(
                     "Record Harvest", class_name="text-xl font-bold text-stone-800"
+                ),
+                rx.cond(
+                    CropState.dialog_error != "",
+                    rx.el.div(
+                        rx.icon(
+                            "triangle-alert", class_name="h-4 w-4 mr-2 flex-shrink-0"
+                        ),
+                        CropState.dialog_error,
+                        class_name="flex items-start text-red-600 text-sm bg-red-50 border border-red-200 p-3 rounded-lg mt-3",
+                    ),
+                    None,
                 ),
                 rx.el.form(
                     rx.el.div(
@@ -188,7 +210,7 @@ def add_harvest_dialog() -> rx.Component:
                             placeholder="e.g., 7000.00",
                             class_name="mt-1 w-full p-2 border rounded-md",
                         ),
-                        class_name="grid grid-cols-2 gap-4 my-6",
+                        class_name="grid grid-cols-1 sm:grid-cols-2 gap-4 my-6",
                     ),
                     rx.el.div(
                         rx.el.button(
@@ -205,9 +227,8 @@ def add_harvest_dialog() -> rx.Component:
                         class_name="flex justify-end gap-4",
                     ),
                     on_submit=CropState.add_harvest,
-                    reset_on_submit=True,
                 ),
-                class_name="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl z-50",
+                class_name="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl z-50 max-h-[90vh] overflow-y-auto",
             ),
             class_name="fixed inset-0 flex items-center justify-center p-4 z-50",
         ),
@@ -228,17 +249,17 @@ def overview_tab_content() -> rx.Component:
                 CropState.current_crop["activities"].length(),
             ),
             metric_card(
-                "receipt", "Total Expenses", f"${CropState.total_expenses.to_string()}"
+                "receipt", "Total Expenses", f"₹{CropState.total_expenses.to_string()}"
             ),
             metric_card(
                 "banknote",
                 "Harvest Income",
-                f"${CropState.total_harvest_income.to_string()}",
+                f"₹{CropState.total_harvest_income.to_string()}",
             ),
             metric_card(
                 "trending-up",
                 "Profitability",
-                f"${CropState.profitability.to_string()}",
+                f"₹{CropState.profitability.to_string()}",
             ),
             class_name="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6",
         ),
@@ -268,7 +289,7 @@ def overview_tab_content() -> rx.Component:
                     CropState.expense_breakdown,
                     lambda item: rx.el.div(
                         rx.el.div(
-                            class_name=f"h-3 w-3 rounded-full",
+                            class_name="h-3 w-3 rounded-full",
                             style={"backgroundColor": item["fill"]},
                         ),
                         rx.el.span(item["name"], class_name="text-sm text-stone-600"),
@@ -302,7 +323,7 @@ def activity_history_tab_content() -> rx.Component:
                             record["activity_type"], class_name="px-4 py-2 border-t"
                         ),
                         rx.el.td(
-                            f"${record['cost'].to_string()}",
+                            f"₹{record['cost'].to_string()}",
                             class_name="px-4 py-2 border-t",
                         ),
                         rx.el.td(record["notes"], class_name="px-4 py-2 border-t"),
@@ -335,7 +356,7 @@ def harvest_records_tab_content() -> rx.Component:
                             class_name="px-4 py-2 border-t",
                         ),
                         rx.el.td(
-                            f"${record['income'].to_string()}",
+                            f"₹{record['income'].to_string()}",
                             class_name="px-4 py-2 border-t",
                         ),
                     ),
