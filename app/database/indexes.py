@@ -19,6 +19,15 @@ async def create_indexes(db) -> None:
         await db.users.create_index("email", unique=True)
         logger.info("Created index: users.email (unique)")
 
+        # Farms collection
+        await db.farms.create_index("farm_id", unique=True)
+        logger.info("Created index: farms.farm_id (unique)")
+
+        # Family members collection
+        await db.family_members.create_index("farm_id")
+        await db.family_members.create_index("email")
+        logger.info("Created indexes: family_members.farm_id, email")
+
         # Cattle collection
         await db.cattle.create_index("animal_type")
         await db.cattle.create_index("health_status")

@@ -17,6 +17,7 @@ A full-stack, AI-powered farm management platform built with **Reflex** (Python)
 - **Reports & Export** — financial summaries, PDF (reportlab) and Excel (openpyxl) export, date-range filtering.
 - **AG Grid Tables** — sortable/filterable tables for transactions, cattle, and breeding with CSV/Excel export.
 - **Weather** — live Open-Meteo forecast (no API key) with farming suggestions and alerts.
+- **Family & Farm Settings** — rename your farm (shown in the app header) and add family members who log in with their own account and share the same farm data. Invitations auto-join on sign-up.
 - **i18n** — English, Tamil (தமிழ்), Hindi (हिन्दी). **Theme** — dark/light toggle. **PWA** — offline-capable manifest.
 
 ---
@@ -64,6 +65,45 @@ reflex run
 # FastAPI REST API (optional) — http://localhost:8000/docs
 uvicorn app.api:app --reload
 ```
+
+---
+
+## 🚀 Free Deployment (MongoDB Atlas + Reflex Cloud)
+
+The app is fully deployable **for free** using MongoDB Atlas (database) and
+Reflex Cloud (hosting). Reflex's backend uses WebSockets, so it cannot run on
+Vercel's stateless serverless functions — Reflex Cloud is the supported host.
+
+### 1. Create a free MongoDB Atlas database
+
+1. Go to https://www.mongodb.com/cloud/atlas/register and create a free account.
+2. Click **Build a Database** → choose the **M0 (free)** tier → a cloud provider
+   and region (e.g. AWS / ap-south-1) → **Create**. It takes ~2 minutes.
+3. Under **Database Access**, add a database user and set a strong password
+   (remember both).
+4. Under **Network Access**, click **Add IP Address** → **Allow access from
+   anywhere** (`0.0.0.0/0`) → Confirm.
+5. Click **Connect** → **Drivers** → copy the connection string. It looks like:
+   `mongodb+srv://<dbuser>:<password>@cluster0.xxxxx.mongodb.net/` — replace
+   `<dbuser>` and `<password>` with the credentials from step 3 and append the
+   database name: `mongodb+srv://<dbuser>:<password>@cluster0.xxxxx.mongodb.net/agriledger?retryWrites=true&w=majority`
+6. Put it in your local `.env` file:
+   `MONGODB_URI=mongodb+srv://<dbuser>:<password>@cluster0.xxxxx.mongodb.net/agriledger?retryWrites=true&w=majority`
+
+### 2. Deploy to Reflex Cloud (free)
+
+```bash
+pip install -r requirements.txt
+reflex login          # create a free Reflex account when prompted
+reflex deploy --env MONGODB_URI="<your atlas uri>" --env SECRET_KEY="<a long random string>"
+```
+
+Follow the prompts (pick a region close to you). When it finishes it prints
+your live URL. Optional env vars: `GEMINI_API_KEY` (AI + bill-scanning),
+`GEMINI_MODEL`.
+
+> On the free plan the app may sleep after inactivity and take a few seconds to
+> wake on the first request — that's normal.
 
 ---
 

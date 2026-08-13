@@ -34,10 +34,12 @@ from app.components.feed.feed_panels import feed_overview_cards
 from app.components.milk.milk_page import milk_page
 from app.states.ai_insights_state import AIInsightsState
 from app.states.cattle_state import CattleState
+from app.states.family_state import FamilyState
 from app.states.feed_state import FeedState
 from app.states.dashboard_state import DashboardState
 from app.states.breeding_state import BreedingState
 from app.states.crop_state import CropState
+from app.states.settings_state import SettingsState
 from app.states.transaction_state import TransactionState
 
 
@@ -385,6 +387,7 @@ app.add_page(
         BreedingState.fetch_breeding_cycles,
         FeedState.fetch_feed_data,
         FeedState.auto_sync_homegrown_crops,
+        SettingsState.fetch_farm_settings,
     ],
 )
 app.add_page(
@@ -467,7 +470,15 @@ app.add_page(
     ],
 )
 app.add_page(reports_page, route="/reports", on_load=AuthState.require_login)
-app.add_page(settings_page, route="/settings", on_load=AuthState.require_login)
+app.add_page(
+    settings_page,
+    route="/settings",
+    on_load=[
+        AuthState.require_login,
+        SettingsState.fetch_farm_settings,
+        FamilyState.fetch_members,
+    ],
+)
 app.add_page(
     transactions_page,
     route="/transactions",

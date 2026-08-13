@@ -75,12 +75,17 @@ class AuthState(rx.State):
             self.error_message = "User with this email already exists."
             return
         hashed_pw = hash_password(password)
+        # If the farm owner added this email as a family member, the new
+        # account joins that farm instead of creating a brand-new one.
+        pending_invite = await crud.get_family_member_by_email(email)
         new_user: User = {
             "name": name,
             "email": email,
             "password": hashed_pw,
             "role": "viewer",
-            "farm_id": str(uuid.uuid4()),
+            "farm_id": (
+                pending_invite["farm_id"] if pending_invite else str(uuid.uuid4())
+            ),
             "phone": None,
             "is_active": True,
         }
@@ -88,6 +93,8 @@ class AuthState(rx.State):
         if not success:
             self.error_message = "Failed to create account. Please try again."
             return
+        if pending_invite:
+            await crud.update_family_member_status(pending_invite["id"], "active")
         self.is_logged_in = True
         self.current_user = new_user
         return rx.redirect("/dashboard")

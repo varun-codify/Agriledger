@@ -3,6 +3,7 @@ import reflex as rx
 from app.components.common import install_app_button
 from app.components.quick_add import quick_add_dialog
 from app.states.auth_state import AuthState
+from app.states.settings_state import SettingsState
 from app.states.ui_state import UIState
 
 
@@ -412,7 +413,9 @@ def dashboard_header() -> rx.Component:
                 aria_label="Toggle sidebar",
                 class_name="p-2 rounded-md hover:bg-stone-200 transition-colors hidden md:flex",
             ),
-            rx.el.span("My Farm", class_name="font-semibold text-stone-800"),
+            rx.el.span(
+                SettingsState.farm_name, class_name="font-semibold text-stone-800 truncate"
+            ),
             class_name="flex items-center gap-4",
         ),
         rx.el.div(

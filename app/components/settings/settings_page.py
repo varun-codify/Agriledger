@@ -14,6 +14,7 @@ from app.states.ui_state import UIState
 GEMINI_ACTIVE = config.gemini.is_configured
 # The model name the AI features will try first (the one shown as active).
 GEMINI_MODEL_NAME = config.gemini.model
+from app.states.family_state import FamilyState
 from app.states.i18n_state import I18nState
 from app.states.notification_state import NotificationState
 from app.states.settings_state import SettingsState
@@ -217,6 +218,134 @@ def notification_settings_section() -> rx.Component:
     )
 
 
+def family_members_section() -> rx.Component:
+    """Family members who share access to this farm."""
+    return rx.el.div(
+        rx.el.h3(
+            "Family Members", class_name="text-lg font-semibold text-stone-800 mb-1"
+        ),
+        rx.el.p(
+            "People you add can log in with their own account and see the same "
+            "farm data. If they don't have an account yet, they join the farm "
+            "automatically when they sign up.",
+            class_name="text-sm text-stone-500 mb-4",
+        ),
+        rx.cond(
+            FamilyState.family_error != "",
+            rx.el.div(
+                rx.icon("triangle-alert", class_name="h-4 w-4 mr-2 flex-shrink-0"),
+                FamilyState.family_error,
+                class_name="flex items-start text-red-600 text-sm bg-red-50 border border-red-200 p-3 rounded-lg mb-4",
+            ),
+            None,
+        ),
+        # Existing members
+        rx.cond(
+            FamilyState.members.length() == 0,
+            rx.el.div(
+                rx.el.p(
+                    "No family members yet. Add the first one below.",
+                    class_name="text-sm text-stone-400 py-6 text-center bg-stone-50 rounded-xl mb-4",
+                ),
+            ),
+            rx.el.div(
+                rx.foreach(
+                    FamilyState.members,
+                    lambda m: rx.el.div(
+                        rx.image(
+                            src=f"https://api.dicebear.com/9.x/initials/svg?seed={m['name']}",
+                            class_name="w-10 h-10 rounded-full border-2 border-stone-200 flex-shrink-0",
+                        ),
+                        rx.el.div(
+                            rx.el.p(
+                                m["name"], class_name="font-medium text-stone-800 text-sm"
+                            ),
+                            rx.el.p(
+                                m["email"] + (f" · {m['phone']}" if m.get("phone") else ""),
+                                class_name="text-xs text-stone-500",
+                            ),
+                            class_name="flex-1 min-w-0",
+                        ),
+                        rx.cond(
+                            m["status"] == "active",
+                            rx.el.span(
+                                "Active",
+                                class_name="px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700",
+                            ),
+                            rx.el.span(
+                                "Invited",
+                                class_name="px-2 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700",
+                            ),
+                        ),
+                        rx.cond(
+                            FamilyState.pending_delete_id == m["id"],
+                            rx.el.button(
+                                "Confirm?",
+                                on_click=lambda: FamilyState.remove_member(m["id"]),
+                                class_name="px-3 py-1.5 rounded-md text-xs font-semibold bg-red-600 text-white hover:bg-red-700 transition flex-shrink-0",
+                            ),
+                            rx.el.button(
+                                rx.icon("trash-2", class_name="h-4 w-4"),
+                                on_click=lambda: FamilyState.set_pending_delete_id(m["id"]),
+                                class_name="p-1.5 rounded-md text-red-400 hover:bg-red-50 hover:text-red-600 transition flex-shrink-0",
+                            ),
+                        ),
+                        class_name="flex items-center gap-3 p-3 bg-stone-50 rounded-xl mb-2",
+                    ),
+                ),
+                class_name="mb-4",
+            ),
+        ),
+        # Add-member form
+        rx.el.div(
+            rx.el.div(
+                rx.el.label(
+                    "Name", class_name="block text-sm font-medium text-stone-700 mb-1"
+                ),
+                rx.el.input(
+                    placeholder="e.g., Rani",
+                    value=FamilyState.new_member_name,
+                    on_change=FamilyState.set_new_member_name,
+                    class_name="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500",
+                ),
+            ),
+            rx.el.div(
+                rx.el.label(
+                    "Email", class_name="block text-sm font-medium text-stone-700 mb-1"
+                ),
+                rx.el.input(
+                    type="email",
+                    placeholder="e.g., rani@example.com",
+                    value=FamilyState.new_member_email,
+                    on_change=FamilyState.set_new_member_email,
+                    class_name="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500",
+                ),
+            ),
+            rx.el.div(
+                rx.el.label(
+                    "Phone (optional)",
+                    class_name="block text-sm font-medium text-stone-700 mb-1",
+                ),
+                rx.el.input(
+                    type="tel",
+                    placeholder="e.g., +91 98765 43210",
+                    value=FamilyState.new_member_phone,
+                    on_change=FamilyState.set_new_member_phone,
+                    class_name="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500",
+                ),
+            ),
+            class_name="grid grid-cols-1 md:grid-cols-3 gap-4",
+        ),
+        rx.el.button(
+            rx.icon("user-plus", class_name="h-4 w-4 mr-2"),
+            "Add Member",
+            on_click=FamilyState.add_member,
+            class_name="mt-4 flex items-center px-4 py-2 bg-emerald-500 text-white rounded-lg font-semibold hover:bg-emerald-600 transition",
+        ),
+        class_name="bg-white p-6 rounded-2xl shadow-sm border border-stone-100 mb-6",
+    )
+
+
 def language_section() -> rx.Component:
     """Language selection with i18n support."""
     return rx.el.div(
@@ -381,6 +510,7 @@ def settings_page_content() -> rx.Component:
     return rx.el.div(
         profile_section(),
         farm_details_section(),
+        family_members_section(),
         language_section(),
         notification_settings_section(),
         preferences_section(),

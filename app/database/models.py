@@ -30,6 +30,24 @@ Severity = Literal["Normal", "Attention Needed", "Critical"]
 
 # ─── User Models ──────────────────────────────────────────────────────
 
+class Farm(TypedDict):
+    farm_id: str
+    name: str
+    location: str
+    size: str
+
+
+class FamilyMember(TypedDict):
+    id: str
+    farm_id: str
+    name: str
+    email: str
+    phone: Optional[str]
+    role: str  # "member" (owner is implicit — the account that created the farm)
+    status: str  # "active" | "invited"
+    added_date: str
+
+
 class User(TypedDict):
     name: str
     email: str

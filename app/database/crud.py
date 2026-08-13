@@ -11,6 +11,8 @@ from app.database.models import (
     Cattle,
     CoconutSale,
     Crop,
+    FamilyMember,
+    Farm,
     FeedConsumption,
     FeedStock,
     FeedType,
@@ -34,6 +36,100 @@ async def get_user_by_email(email: str) -> User | None:
     except Exception as e:
         logging.exception(f"Error fetching user: {e}")
         return None
+
+
+async def get_farm(farm_id: str) -> Farm | None:
+    """Fetch a farm's settings (name, location, size) by farm_id."""
+    try:
+        db = get_db()
+        return await db.farms.find_one({"farm_id": farm_id}, {"_id": 0})
+    except Exception as e:
+        logging.exception(f"Error fetching farm: {e}")
+        return None
+
+
+async def upsert_farm(farm_id: str, settings: dict) -> bool:
+    """Save (insert or replace) a farm's settings."""
+    try:
+        db = get_db()
+        await db.farms.update_one(
+            {"farm_id": farm_id},
+            {"$set": {"farm_id": farm_id, **settings}},
+            upsert=True,
+        )
+        return True
+    except Exception as e:
+        logging.exception(f"Error saving farm: {e}")
+        return False
+
+
+async def get_family_members(farm_id: str) -> list[FamilyMember]:
+    """All family members who share access to a farm."""
+    try:
+        db = get_db()
+        cursor = db.family_members.find({"farm_id": farm_id}, {"_id": 0})
+        return await cursor.to_list(length=None)
+    except Exception as e:
+        logging.exception(f"Error fetching family members: {e}")
+        return []
+
+
+async def create_family_member(member: FamilyMember) -> bool:
+    """Add a family member record to a farm."""
+    try:
+        db = get_db()
+        await db.family_members.insert_one(member)
+        return True
+    except Exception as e:
+        logging.exception(f"Error creating family member: {e}")
+        return False
+
+
+async def get_family_member_by_email(email: str) -> FamilyMember | None:
+    """Find any family membership across farms for an email (used at sign-up)."""
+    try:
+        db = get_db()
+        return await db.family_members.find_one({"email": email}, {"_id": 0})
+    except Exception as e:
+        logging.exception(f"Error fetching family member: {e}")
+        return None
+
+
+async def update_family_member_status(member_id: str, status: str) -> bool:
+    """Mark a member active after they sign up."""
+    try:
+        db = get_db()
+        result = await db.family_members.update_one(
+            {"id": member_id}, {"$set": {"status": status}}
+        )
+        return result.modified_count > 0
+    except Exception as e:
+        logging.exception(f"Error updating family member: {e}")
+        return False
+
+
+async def delete_family_member(farm_id: str, member_id: str) -> bool:
+    """Remove a family member from a farm (farm-scoped for safety)."""
+    try:
+        db = get_db()
+        result = await db.family_members.delete_one({"id": member_id, "farm_id": farm_id})
+        return result.deleted_count > 0
+    except Exception as e:
+        logging.exception(f"Error deleting family member: {e}")
+        return False
+
+
+async def update_user_farm_id(email: str, farm_id: str) -> bool:
+    """Re-point an existing user at a farm (used to share/revoke farm access)."""
+    try:
+        db = get_db()
+        result = await db.users.update_one(
+            {"email": email}, {"$set": {"farm_id": farm_id}}
+        )
+        return result.modified_count > 0
+    except Exception as e:
+        logging.exception(f"Error updating user farm: {e}")
+        return False
 
 
 async def create_user(user: User) -> bool:

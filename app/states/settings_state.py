@@ -1,5 +1,8 @@
 import reflex as rx
 
+from app.database import crud
+from app.states.auth_state import AuthState
+
 
 class SettingsState(rx.State):
     """Manages user settings and preferences."""
@@ -9,10 +12,20 @@ class SettingsState(rx.State):
     notifications_enabled: bool = True
     email_alerts: bool = True
     sms_alerts: bool = False
-    farm_name: str = "My Green Farm"
+    farm_name: str = "My Farm"
     farm_location: str = "Springfield"
     farm_size: str = "50 Acres"
     settings_error: str = ""
+
+    @rx.event
+    async def fetch_farm_settings(self):
+        """Load the farm's saved name/location/size from the database."""
+        auth = await self.get_state(AuthState)
+        farm = await crud.get_farm(auth.farm_id)
+        if farm:
+            self.farm_name = farm.get("name") or self.farm_name
+            self.farm_location = farm.get("location") or self.farm_location
+            self.farm_size = farm.get("size") or self.farm_size
 
     @rx.event
     def toggle_theme(self):
@@ -32,7 +45,7 @@ class SettingsState(rx.State):
             self.sms_alerts = value
 
     @rx.event
-    def update_farm_details(self, form_data: dict):
+    async def update_farm_details(self, form_data: dict):
         farm_name = str(form_data.get("farm_name", "")).strip()
         farm_location = str(form_data.get("farm_location", "")).strip()
         farm_size = str(form_data.get("farm_size", "")).strip()
@@ -46,6 +59,17 @@ class SettingsState(rx.State):
         self.farm_location = farm_location
         self.farm_size = farm_size
         self.settings_error = ""
+        auth = await self.get_state(AuthState)
+        saved = await crud.upsert_farm(
+            auth.farm_id,
+            {
+                "name": farm_name,
+                "location": farm_location,
+                "size": farm_size,
+            },
+        )
+        if not saved:
+            return rx.toast.error("Could not save farm details. Please try again.")
         return rx.toast.success("Farm details updated successfully!")
 
     @rx.event
