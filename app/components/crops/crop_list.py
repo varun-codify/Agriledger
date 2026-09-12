@@ -187,11 +187,20 @@ def crop_management_page() -> rx.Component:
                 ),
                 class_name="flex gap-2",
             ),
-            rx.el.button(
-                rx.icon("plus", class_name="h-4 w-4 mr-2"),
-                "Add New Crop",
-                on_click=lambda: CropState.toggle_add_crop_dialog(True),
-                class_name="flex items-center bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-emerald-600 transition-all",
+            rx.el.div(
+                rx.el.a(
+                    rx.icon("scan-eye", class_name="h-4 w-4 mr-2 text-emerald-600"),
+                    "AI Leaf Disease Scanner",
+                    href="/disease-scanner",
+                    class_name="flex items-center bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100 px-4 py-2 rounded-lg font-semibold transition-all shadow-sm",
+                ),
+                rx.el.button(
+                    rx.icon("plus", class_name="h-4 w-4 mr-2"),
+                    "Add New Crop",
+                    on_click=lambda: CropState.toggle_add_crop_dialog(True),
+                    class_name="flex items-center bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-emerald-600 transition-all",
+                ),
+                class_name="flex items-center gap-3",
             ),
             class_name="flex items-center justify-between mb-6",
         ),

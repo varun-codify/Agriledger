@@ -404,9 +404,6 @@ def crop_profile_content() -> rx.Component:
                     "Add Harvest",
                     lambda: CropState.toggle_add_harvest_dialog(True),
                 ),
-                action_button(
-                    "pencil", "Edit Details", rx.toast.info("Edit not yet implemented.")
-                ),
                 class_name="flex items-center gap-2",
             ),
             class_name="flex items-center justify-between mb-6",

@@ -288,7 +288,7 @@ def actions_section() -> rx.Component:
             detail_card_action_button(
                 "plus",
                 "Add Follow-up Note",
-                rx.toast.info("Follow-up notes not implemented yet."),
+                lambda: BreedingState.toggle_follow_up_dialog(True),
                 "bg-stone-200 text-stone-800 hover:bg-stone-300",
             ),
             class_name="mt-4 flex gap-4",
@@ -315,6 +315,66 @@ def follow_up_checks_list() -> rx.Component:
     )
 
 
+def follow_up_dialog() -> rx.Component:
+    """Dialog to record a follow-up check on the current breeding cycle."""
+    return rx.cond(
+        BreedingState.show_follow_up_dialog,
+        rx.el.div(
+            rx.el.div(
+                class_name="fixed inset-0 bg-black/50 z-40",
+                on_click=lambda: BreedingState.toggle_follow_up_dialog(False),
+            ),
+            rx.el.div(
+                rx.el.h2(
+                    "Add Follow-up Check",
+                    class_name="text-xl font-bold text-stone-800",
+                ),
+                rx.el.form(
+                    rx.el.div(
+                        rx.el.label(
+                            "Date", class_name="text-sm font-medium"
+                        ),
+                        rx.el.input(
+                            type="date",
+                            default_value=BreedingState.follow_up_date,
+                            on_change=BreedingState.set_follow_up_date,
+                            class_name="mt-1 w-full p-2 border rounded-md",
+                        ),
+                        rx.el.label(
+                            "Notes", class_name="text-sm font-medium mt-4"
+                        ),
+                        rx.el.textarea(
+                            placeholder="e.g., Ultrasound check normal...",
+                            value=BreedingState.follow_up_notes,
+                            on_change=BreedingState.set_follow_up_notes,
+                            class_name="mt-1 w-full p-2 border rounded-md h-24",
+                        ),
+                        class_name="space-y-2 my-6",
+                    ),
+                    rx.el.div(
+                        rx.el.button(
+                            "Cancel",
+                            on_click=lambda: BreedingState.toggle_follow_up_dialog(
+                                False
+                            ),
+                            class_name="px-4 py-2 bg-stone-200 rounded-md font-semibold",
+                        ),
+                        rx.el.button(
+                            "Save Check",
+                            type="submit",
+                            class_name="px-4 py-2 bg-emerald-500 text-white rounded-md font-semibold",
+                        ),
+                        class_name="flex justify-end gap-4",
+                    ),
+                    on_submit=lambda _form_data: BreedingState.submit_follow_up_check(),
+                ),
+                class_name="bg-white p-8 rounded-2xl shadow-xl w-full max-w-lg z-50 max-h-[90vh] overflow-y-auto",
+            ),
+            class_name="fixed inset-0 flex items-center justify-center p-4 z-50",
+        ),
+    )
+
+
 def breeding_detail_content() -> rx.Component:
     return rx.el.div(
         breeding_timeline_visual(),
@@ -322,6 +382,7 @@ def breeding_detail_content() -> rx.Component:
         rx.el.div(follow_up_checks_list(), class_name="mt-6"),
         pregnancy_confirmation_dialog(),
         calving_record_dialog(),
+        follow_up_dialog(),
     )
 
 

@@ -193,6 +193,7 @@ def transactions_grid() -> rx.Component:
             suppress_row_hover_highlight=False,
             animate_rows=True,
             class_name="ag-theme-alpine",
+            width="100%",
         ),
         class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100",
     )
@@ -222,6 +223,7 @@ def milk_sales_grid() -> rx.Component:
             dom_layout="autoHeight",
             animate_rows=True,
             class_name="ag-theme-alpine",
+            width="100%",
         ),
         class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100",
     )
@@ -251,6 +253,7 @@ def coconut_sales_grid() -> rx.Component:
             dom_layout="autoHeight",
             animate_rows=True,
             class_name="ag-theme-alpine",
+            width="100%",
         ),
         class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100",
     )

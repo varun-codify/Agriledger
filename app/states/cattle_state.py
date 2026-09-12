@@ -9,11 +9,101 @@ from app.states.auth_state import AuthState
 from app.database.models import Cattle, HealthNote, MilkProduction, VaccinationRecord
 
 
-class CattleState(rx.State):
-    """Manages the state for the cattle management module."""
+def _to_bool(value) -> bool:
+    """Normalize a browser form value into a real bool.
 
-    cattle_list: list[Cattle] = []
-    DEMO_CATTLE_DATA: list[Cattle] = [
+    HTML checkboxes submit the literal string "on" when checked and omit the
+    field entirely when unchecked; Reflex may also deliver True/False or "".
+    Accept the common truthy spellings and treat everything else as False.
+    """
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    return str(value).strip().lower() in ("1", "true", "yes", "on", "checked")
+
+
+def _normalize_iso_date(raw: str) -> str | None:
+    """Normalize a date submitted by a browser into ISO (YYYY-MM-DD).
+
+    <input type="date"> submits YYYY-MM-DD, but some browsers/locales and
+    mobile keyboards deliver MM/DD/YYYY (or DD-MM-YYYY). Returns None when
+    the value cannot be parsed so callers can show a friendly error.
+    """
+    value = (raw or "").strip()
+    if not value:
+        return None
+    # Already ISO.
+    try:
+        return datetime.date.fromisoformat(value).isoformat()
+    except ValueError:
+        pass
+    # MM/DD/YYYY or MM-DD-YYYY (en-US input.value locale).
+    for fmt in ("%m/%d/%Y", "%m-%d-%Y", "%d/%m/%Y", "%d-%m-%Y", "%d.%m.%Y"):
+        try:
+            return datetime.datetime.strptime(value, fmt).date().isoformat()
+        except ValueError:
+            continue
+    return None
+
+
+def _as_int(value, default: int = 0) -> int:
+    """Coerce a DB/legacy value to int without raising."""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _as_float(value, default: float = 0.0) -> float:
+    """Coerce a DB/legacy value to float without raising."""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _normalize_cattle_row(row: dict) -> Cattle:
+    """Fill defaults for every required Cattle key.
+
+    Legacy/corrupt rows (missing image_url, string bools, locale-formatted
+    dates, None list fields, string numbers) must never crash computed vars
+    or components that index into the row directly.
+    """
+    weight_raw = row.get("weight")
+    clean: dict = {
+        "id": str(row.get("id", "")),
+        "name": str(row.get("name", "")),
+        "animal_type": str(row.get("animal_type", "cow")),
+        "tag_number": str(row.get("tag_number", "")),
+        "age": _as_int(row.get("age", 0)),
+        "breed": str(row.get("breed", "")),
+        "purchase_date": _normalize_iso_date(row.get("purchase_date", ""))
+        or str(row.get("purchase_date", "")),
+        "purchase_price": _as_float(row.get("purchase_price", 0.0)),
+        "image_url": str(row.get("image_url", "") or ""),
+        "health_status": str(row.get("health_status", "Healthy")),
+        "milk_production": row.get("milk_production") or [],
+        "vaccinations": row.get("vaccinations") or [],
+        "health_notes": row.get("health_notes") or [],
+        "feed_records": row.get("feed_records") or [],
+        "is_juvenile": _to_bool(row.get("is_juvenile", False)),
+        "parent_id": row.get("parent_id"),
+        "mother_id": row.get("mother_id"),
+        "weight": _as_float(weight_raw, 0.0)
+        if weight_raw not in (None, "")
+        else None,
+        "is_active": _to_bool(row.get("is_active", True)),
+    }
+    if "farm_id" in row:
+        clean["farm_id"] = row["farm_id"]
+    return clean
+
+
+# Demo rows seeded into a farm's collection on first load. Kept as a
+# module-level constant (not a state var) so it is never serialized to the
+# browser — state base vars are sent to every client on every page load.
+DEMO_CATTLE_DATA: list[Cattle] = [
         {
             "id": "c1",
             "name": "Lakshmi",
@@ -191,6 +281,12 @@ class CattleState(rx.State):
             "farm_id": "demo-farm",
         },
     ]
+
+
+class CattleState(rx.State):
+    """Manages the state for the cattle management module."""
+
+    cattle_list: list[Cattle] = []
     show_add_cattle_dialog: bool = False
     new_cattle_date: str = datetime.date.today().isoformat()
     show_milk_dialog: bool = False
@@ -219,8 +315,11 @@ class CattleState(rx.State):
     async def fetch_cattle_list(self):
         """Fetches cattle list from DB (seeds demo data per-farm if empty)."""
         auth = await self.get_state(AuthState)
-        await crud.ensure_farm_seed("cattle", auth.farm_id, self.DEMO_CATTLE_DATA)
-        self.cattle_list = await crud.get_all_cattle(farm_id=auth.farm_id)
+        await crud.ensure_farm_seed("cattle", auth.farm_id, DEMO_CATTLE_DATA)
+        rows = await crud.get_all_cattle(farm_id=auth.farm_id)
+        # Normalize legacy/corrupt rows (string bools, locale dates, missing
+        # keys like image_url) so state validation and computed vars never trip.
+        self.cattle_list = [_normalize_cattle_row(row) for row in rows]
 
     @rx.event
     async def add_cattle(self, form_data: dict):
@@ -275,6 +374,11 @@ class CattleState(rx.State):
                 self.add_cattle_error = "Purchase price must be a valid number."
                 return
 
+        iso_purchase_date = _normalize_iso_date(purchase_date)
+        if not iso_purchase_date:
+            self.add_cattle_error = "Purchase date must be a valid date."
+            return
+
         try:
             auth = await self.get_state(AuthState)
             new_cattle: Cattle = {
@@ -284,14 +388,15 @@ class CattleState(rx.State):
                 "tag_number": tag_number,
                 "age": age,
                 "breed": breed,
-                "purchase_date": purchase_date,
+                "purchase_date": iso_purchase_date,
                 "purchase_price": purchase_price,
                 "image_url": f"https://api.dicebear.com/9.x/notionists/svg?seed={name}",
                 "health_status": "Healthy",
                 "milk_production": [],
                 "vaccinations": [],
                 "health_notes": [],
-                "is_juvenile": form_data.get("is_juvenile", False),
+                "feed_records": [],
+                "is_juvenile": _to_bool(form_data.get("is_juvenile", False)),
                 "parent_id": form_data.get("parent_id"),
                 "mother_id": form_data.get("mother_id"),
                 "weight": weight,
@@ -306,7 +411,7 @@ class CattleState(rx.State):
                 return rx.toast.success("Animal added successfully!")
             else:
                 self.add_cattle_error = "Failed to save animal to database. Please try again."
-        except (ValueError, KeyError) as e:
+        except Exception as e:  # noqa: BLE001 - surface a friendly message, log details
             logging.exception(f"Error adding animal: {e}")
             self.add_cattle_error = "Something went wrong while saving. Please check your inputs."
 
@@ -410,10 +515,10 @@ class CattleState(rx.State):
             purchase_cost = c.get("purchase_price", 0)
             profit = estimated_revenue - purchase_cost
             result.append({
-                "id": c["id"],
-                "name": c["name"],
-                "animal_type": c["animal_type"],
-                "image_url": c["image_url"],
+                "id": c.get("id", ""),
+                "name": c.get("name", ""),
+                "animal_type": c.get("animal_type", ""),
+                "image_url": c.get("image_url", ""),
                 "total_milk": f"{total_milk:.1f}",
                 "revenue": f"₹{estimated_revenue:,.0f}",
                 "cost": f"₹{purchase_cost:,.0f}",
@@ -507,17 +612,21 @@ class CattleState(rx.State):
         if not self.current_cattle:
             return []
         thirty_days_ago = datetime.date.today() - datetime.timedelta(days=30)
-        recent_production = [
-            record
-            for record in self.current_cattle["milk_production"]
-            if datetime.date.fromisoformat(record["date"]) >= thirty_days_ago
-        ]
+        recent_production = []
+        for record in self.current_cattle.get("milk_production", []) or []:
+            iso = _normalize_iso_date(record.get("date", ""))
+            if not iso:
+                continue
+            try:
+                record_date = datetime.date.fromisoformat(iso)
+            except ValueError:
+                continue
+            if record_date >= thirty_days_ago:
+                recent_production.append({**record, "date": iso})
         recent_production.sort(key=lambda x: x["date"])
         return [
             {
-                "date": datetime.datetime.fromisoformat(record["date"]).strftime(
-                    "%b %d"
-                ),
+                "date": datetime.date.fromisoformat(record["date"]).strftime("%b %d"),
                 "liters": record["liters"],
             }
             for record in recent_production

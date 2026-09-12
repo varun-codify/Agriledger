@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "Dockerfile", "use": "@vercel/docker" }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "Dockerfile" }
+  ],
+  "images": {
+    "sizes": [640, 1280, 1920],
+    "domains": ["avatars.githubusercontent.com"]
+  }
+}

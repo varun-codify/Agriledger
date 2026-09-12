@@ -107,6 +107,7 @@ NAV_GROUPS = [
         "items": [
             {"name": "Feed", "icon": "wheat", "href": "/feed"},
             {"name": "Insights & AI", "icon": "bot", "href": "/insights"},
+            {"name": "Crop Disease AI", "icon": "scan-eye", "href": "/disease-scanner"},
         ],
     },
     {
@@ -259,10 +260,11 @@ def sidebar() -> rx.Component:
             ),
             class_name="mt-auto grid items-start p-4 text-sm font-medium gap-2",
         ),
+        style={"backgroundColor": "#faf8f5"},
         class_name=rx.cond(
             UIState.sidebar_collapsed,
-            "hidden md:flex flex-col h-screen bg-cream-100 border-r border-stone-200 transition-all w-20 overflow-y-auto",
-            "hidden md:flex flex-col h-screen bg-cream-100 border-r border-stone-200 transition-all w-64 overflow-y-auto",
+            "hidden md:flex flex-col h-screen bg-[#faf8f5] border-r border-stone-200 transition-all w-20 overflow-y-auto",
+            "hidden md:flex flex-col h-screen bg-[#faf8f5] border-r border-stone-200 transition-all w-64 overflow-y-auto",
         ),
     )
 
@@ -355,11 +357,11 @@ def mobile_drawer() -> rx.Component:
                 ),
                 class_name="mt-auto grid gap-2 p-4 border-t border-stone-200",
             ),
-            aria_hidden=rx.cond(UIState.mobile_nav_open, "false", "true"),
+            style={"backgroundColor": "#faf8f5"},
             class_name=rx.cond(
                 UIState.mobile_nav_open,
-                "fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col bg-cream-100 shadow-2xl md:hidden transform translate-x-0 transition-transform duration-300 ease-in-out",
-                "fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col bg-cream-100 shadow-2xl md:hidden transform -translate-x-full transition-transform duration-300 ease-in-out",
+                "fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col bg-[#faf8f5] shadow-2xl md:hidden transform translate-x-0 transition-transform duration-300 ease-in-out",
+                "fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col bg-[#faf8f5] shadow-2xl md:hidden transform -translate-x-full transition-transform duration-300 ease-in-out",
             ),
         ),
     )
@@ -426,7 +428,7 @@ def dashboard_header() -> rx.Component:
             ),
             rx.el.a(
                 rx.image(
-                    src=f"https://api.dicebear.com/9.x/initials/svg?seed={AuthState.current_user['name']}",
+                    src=f"https://api.dicebear.com/9.x/initials/svg?seed={AuthState.user_name}",
                     class_name="w-9 h-9 rounded-full border-2 border-emerald-500",
                 ),
                 href="/settings",
@@ -458,5 +460,6 @@ def dashboard_layout(content: rx.Component, page_title: str) -> rx.Component:
         mobile_bottom_nav(),
         quick_add_dialog(),
         on_mount=[UIState.close_mobile_nav, UIState.check_install_status],
-        class_name="flex min-h-screen w-full bg-cream-100 font-['Lato']",
+        style={"backgroundColor": "#faf8f5"},
+        class_name="flex min-h-screen w-full bg-[#faf8f5] font-['Lato']",
     )

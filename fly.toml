@@ -1,0 +1,44 @@
+# AgriLedger on Fly.io — deployment configuration.
+# Deploy with:  fly deploy
+# (requires `flyctl` authenticated to the account that owns this app)
+app = "dd1ef7f2-2fe9-45ac-ac1a-75dfb9c280ee"
+primary_region = "bom"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  APP_ENV = "production"
+  FRONTEND_PORT = "8000"
+  BACKEND_PORT = "8000"
+
+[experimental]
+  auto_rollback = true
+
+[[services]]
+  internal_port = 8000
+  protocol = "tcp"
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+
+    [[services.ports.http_options]]
+      # Reflex UI events + API responses benefit from compression.
+      compress = true
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls"]
+
+    [[services.ports.http_options]]
+      compress = true
+
+  # Probe Reflex's native /_health (pings MongoDB) before routing traffic.
+  [[services.http_checks]]
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "30s"
+    method = "get"
+    path = "/_health"
+    protocol = "http"

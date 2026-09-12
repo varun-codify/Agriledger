@@ -1,4 +1,4 @@
-"""Settings page with profile, farm details, preferences, i18n, and notifications."""
+"""Settings page with profile, farm details, data management, and integrations."""
 
 import reflex as rx
 
@@ -6,38 +6,26 @@ from app.components.common import install_app_button
 from app.components.layout import dashboard_layout
 from app.config import config
 from app.states.auth_state import AuthState
+from app.states.family_state import FamilyState
+from app.states.settings_state import SettingsState
 from app.states.ui_state import UIState
-
 
 # Server-side truth for the Integrations panel: True when a Gemini API key is
 # configured (evaluated once at import time, so it reflects the running .env).
 GEMINI_ACTIVE = config.gemini.is_configured
 # The model name the AI features will try first (the one shown as active).
 GEMINI_MODEL_NAME = config.gemini.model
-from app.states.family_state import FamilyState
-from app.states.i18n_state import I18nState
-from app.states.notification_state import NotificationState
-from app.states.settings_state import SettingsState
 
 
-def setting_toggle(
-    label: str,
-    description: str,
-    checked: rx.Var[bool],
-    on_change: rx.event.EventHandler,
-) -> rx.Component:
-    return rx.el.div(
+def error_banner(error_var) -> rx.Component:
+    return rx.cond(
+        error_var != "",
         rx.el.div(
-            rx.el.h4(label, class_name="font-medium text-stone-800"),
-            rx.el.p(description, class_name="text-sm text-stone-500"),
+            rx.icon("triangle-alert", class_name="h-4 w-4 mr-2 flex-shrink-0"),
+            error_var,
+            class_name="flex items-start text-red-600 text-sm bg-red-50 border border-red-200 p-3 rounded-lg mb-4",
         ),
-        rx.el.input(
-            type="checkbox",
-            checked=checked,
-            on_change=on_change,
-            class_name="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500",
-        ),
-        class_name="flex items-center justify-between py-4 border-b border-stone-100 last:border-0",
+        None,
     )
 
 
@@ -46,15 +34,7 @@ def profile_section() -> rx.Component:
         rx.el.h3(
             "Profile Settings", class_name="text-lg font-semibold text-stone-800 mb-4"
         ),
-        rx.cond(
-            SettingsState.settings_error != "",
-            rx.el.div(
-                rx.icon("triangle-alert", class_name="h-4 w-4 mr-2 flex-shrink-0"),
-                SettingsState.settings_error,
-                class_name="flex items-start text-red-600 text-sm bg-red-50 border border-red-200 p-3 rounded-lg mb-4",
-            ),
-            None,
-        ),
+        error_banner(SettingsState.settings_error),
         rx.el.form(
             rx.el.div(
                 rx.el.div(
@@ -64,7 +44,7 @@ def profile_section() -> rx.Component:
                     ),
                     rx.el.input(
                         name="name",
-                        default_value=AuthState.current_user["name"],
+                        default_value=AuthState.user_name,
                         class_name="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500",
                     ),
                 ),
@@ -76,7 +56,7 @@ def profile_section() -> rx.Component:
                     rx.el.input(
                         name="email",
                         type="email",
-                        default_value=AuthState.current_user["email"],
+                        default_value=AuthState.user_email,
                         disabled=True,
                         class_name="w-full px-4 py-2 border rounded-lg bg-stone-50 text-stone-500",
                     ),
@@ -99,15 +79,7 @@ def farm_details_section() -> rx.Component:
         rx.el.h3(
             "Farm Details", class_name="text-lg font-semibold text-stone-800 mb-4"
         ),
-        rx.cond(
-            SettingsState.settings_error != "",
-            rx.el.div(
-                rx.icon("triangle-alert", class_name="h-4 w-4 mr-2 flex-shrink-0"),
-                SettingsState.settings_error,
-                class_name="flex items-start text-red-600 text-sm bg-red-50 border border-red-200 p-3 rounded-lg mb-4",
-            ),
-            None,
-        ),
+        error_banner(SettingsState.settings_error),
         rx.el.form(
             rx.el.div(
                 rx.el.div(
@@ -156,68 +128,6 @@ def farm_details_section() -> rx.Component:
     )
 
 
-def notification_settings_section() -> rx.Component:
-    """Email & SMS notification preferences."""
-    return rx.el.div(
-        rx.el.h3(
-            "Notification Preferences",
-            class_name="text-lg font-semibold text-stone-800 mb-4",
-        ),
-        setting_toggle(
-            "Email Notifications",
-            "Receive alerts and reports via email.",
-            SettingsState.email_alerts,
-            lambda v: SettingsState.update_notification_settings("email", v),
-        ),
-        setting_toggle(
-            "SMS Alerts",
-            "Receive critical alerts (breeding, weather) via SMS.",
-            SettingsState.sms_alerts,
-            lambda v: SettingsState.update_notification_settings("sms", v),
-        ),
-        setting_toggle(
-            "In-App Notifications",
-            "Show alerts within the dashboard.",
-            SettingsState.notifications_enabled,
-            lambda v: SettingsState.update_notification_settings("notifications", v),
-        ),
-        rx.el.div(
-            rx.el.h4(
-                "Upcoming Reminders",
-                class_name="font-medium text-stone-800 mb-3 mt-4",
-            ),
-            rx.el.div(
-                rx.cond(
-                    NotificationState.notifications.length() == 0,
-                    rx.el.p(
-                        "No pending notifications.",
-                        class_name="text-sm text-stone-400 py-4",
-                    ),
-                    rx.el.div(
-                        rx.foreach(
-                            NotificationState.notifications,
-                            lambda n: rx.el.div(
-                                rx.el.div(
-                                    rx.el.p(
-                                        n["title"],
-                                        class_name="font-medium text-stone-700 text-sm",
-                                    ),
-                                    rx.el.p(
-                                        n.get("message", ""),
-                                        class_name="text-xs text-stone-500",
-                                    ),
-                                ),
-                                class_name="p-3 bg-stone-50 rounded-lg mb-2",
-                            ),
-                        ),
-                    ),
-                ),
-            ),
-        ),
-        class_name="bg-white p-6 rounded-2xl shadow-sm border border-stone-100 mb-6",
-    )
-
-
 def family_members_section() -> rx.Component:
     """Family members who share access to this farm."""
     return rx.el.div(
@@ -230,15 +140,7 @@ def family_members_section() -> rx.Component:
             "automatically when they sign up.",
             class_name="text-sm text-stone-500 mb-4",
         ),
-        rx.cond(
-            FamilyState.family_error != "",
-            rx.el.div(
-                rx.icon("triangle-alert", class_name="h-4 w-4 mr-2 flex-shrink-0"),
-                FamilyState.family_error,
-                class_name="flex items-start text-red-600 text-sm bg-red-50 border border-red-200 p-3 rounded-lg mb-4",
-            ),
-            None,
-        ),
+        error_banner(FamilyState.family_error),
         # Existing members
         rx.cond(
             FamilyState.members.length() == 0,
@@ -261,7 +163,12 @@ def family_members_section() -> rx.Component:
                                 m["name"], class_name="font-medium text-stone-800 text-sm"
                             ),
                             rx.el.p(
-                                m["email"] + (f" · {m['phone']}" if m.get("phone") else ""),
+                                m["email"],
+                                rx.cond(
+                                    m.get("phone"),
+                                    f" · {m['phone']}",
+                                    "",
+                                ),
                                 class_name="text-xs text-stone-500",
                             ),
                             class_name="flex-1 min-w-0",
@@ -346,71 +253,34 @@ def family_members_section() -> rx.Component:
     )
 
 
-def language_section() -> rx.Component:
-    """Language selection with i18n support."""
+def data_management_section() -> rx.Component:
+    """Real data export — downloads a JSON backup of every farm collection."""
     return rx.el.div(
         rx.el.h3(
-            "Language / மொழी / भाषा",
-            class_name="text-lg font-semibold text-stone-800 mb-4",
+            "Data & Backups", class_name="text-lg font-semibold text-stone-800 mb-1"
         ),
-        rx.el.div(
-            rx.el.button(
-                "English",
-                on_click=lambda: I18nState.set_language("English"),
-                class_name=rx.cond(
-                    I18nState.language == "English",
-                    "px-6 py-3 rounded-xl bg-emerald-500 text-white font-semibold shadow-sm transition-all",
-                    "px-6 py-3 rounded-xl bg-white text-stone-600 font-semibold border border-stone-200 hover:bg-stone-50 transition-all",
-                ),
-            ),
-            rx.el.button(
-                "தமிழ் (Tamil)",
-                on_click=lambda: I18nState.set_language("Tamil"),
-                class_name=rx.cond(
-                    I18nState.language == "Tamil",
-                    "px-6 py-3 rounded-xl bg-emerald-500 text-white font-semibold shadow-sm transition-all",
-                    "px-6 py-3 rounded-xl bg-white text-stone-600 font-semibold border border-stone-200 hover:bg-stone-50 transition-all",
-                ),
-            ),
-            rx.el.button(
-                "हिन्दी (Hindi)",
-                on_click=lambda: I18nState.set_language("Hindi"),
-                class_name=rx.cond(
-                    I18nState.language == "Hindi",
-                    "px-6 py-3 rounded-xl bg-emerald-500 text-white font-semibold shadow-sm transition-all",
-                    "px-6 py-3 rounded-xl bg-white text-stone-600 font-semibold border border-stone-200 hover:bg-stone-50 transition-all",
-                ),
-            ),
-            class_name="flex gap-3 flex-wrap",
+        rx.el.p(
+            "Download a full JSON backup of your farm's data — animals, crops, "
+            "transactions, milk and coconut sales, breeding cycles, and feed records.",
+            class_name="text-sm text-stone-500 mb-4",
         ),
-        class_name="bg-white p-6 rounded-2xl shadow-sm border border-stone-100 mb-6",
-    )
-
-
-def preferences_section() -> rx.Component:
-    return rx.el.div(
-        rx.el.h3("Preferences", class_name="text-lg font-semibold text-stone-800 mb-4"),
-        setting_toggle(
-            "Dark Mode",
-            "Switch between light and dark themes.",
-            SettingsState.theme_mode == "dark",
-            lambda v: SettingsState.toggle_theme(),
-        ),
-        rx.el.div(
-            rx.el.button(
-                rx.icon("database-backup", class_name="h-4 w-4 mr-2"),
-                "Backup All Data",
-                on_click=SettingsState.backup_data,
-                class_name="flex items-center px-4 py-2 bg-stone-800 text-white rounded-lg font-semibold hover:bg-stone-900 transition",
+        rx.el.button(
+            rx.icon("database-backup", class_name="h-4 w-4 mr-2"),
+            rx.cond(
+                SettingsState.is_exporting,
+                "Preparing backup...",
+                "Download JSON Backup",
             ),
-            class_name="pt-4 border-t border-stone-100 mt-4",
+            disabled=SettingsState.is_exporting,
+            on_click=SettingsState.backup_data,
+            class_name="flex items-center px-4 py-2 bg-stone-800 text-white rounded-lg font-semibold hover:bg-stone-900 transition disabled:opacity-60",
         ),
         class_name="bg-white p-6 rounded-2xl shadow-sm border border-stone-100 mb-6",
     )
 
 
 def integrations_section() -> rx.Component:
-    """Shows integration status for external services."""
+    """Shows integration status for external services (server-side truth)."""
     return rx.el.div(
         rx.el.h3(
             "Integrations", class_name="text-lg font-semibold text-stone-800 mb-4"
@@ -436,41 +306,28 @@ def integrations_section() -> rx.Component:
                 ),
                 class_name="flex items-center justify-between py-3 border-b border-stone-100",
             ),
-            # Resend
-            rx.el.div(
-                rx.icon("mail", class_name="h-5 w-5 text-stone-500"),
-                rx.el.div(
-                    rx.el.p("Resend (Email)", class_name="font-medium text-stone-700"),
-                    rx.el.p("Sends reports and alerts via email.", class_name="text-xs text-stone-500"),
-                ),
-                rx.el.span(
-                    "Configure via RESEND_API_KEY",
-                    class_name="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-700",
-                ),
-                class_name="flex items-center justify-between py-3 border-b border-stone-100",
-            ),
-            # Twilio
-            rx.el.div(
-                rx.icon("smartphone", class_name="h-5 w-5 text-stone-500"),
-                rx.el.div(
-                    rx.el.p("Twilio (SMS/WhatsApp)", class_name="font-medium text-stone-700"),
-                    rx.el.p("Sends breeding and weather alerts via SMS.", class_name="text-xs text-stone-500"),
-                ),
-                rx.el.span(
-                    "Configure via TWILIO_*",
-                    class_name="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-700",
-                ),
-                class_name="flex items-center justify-between py-3 border-b border-stone-100",
-            ),
-            # OpenWeather
+            # Weather
             rx.el.div(
                 rx.icon("cloud-sun", class_name="h-5 w-5 text-stone-500"),
                 rx.el.div(
-                    rx.el.p("OpenWeatherMap", class_name="font-medium text-stone-700"),
-                    rx.el.p("Weather data uses free Open-Meteo API (no key needed).", class_name="text-xs text-stone-500"),
+                    rx.el.p("Weather (Open-Meteo)", class_name="font-medium text-stone-700"),
+                    rx.el.p("Live forecast and farming suggestions. Free, no key needed.", class_name="text-xs text-stone-500"),
                 ),
                 rx.el.span(
-                    "Active (Open-Meteo)",
+                    "Active",
+                    class_name="text-xs px-2 py-1 rounded-full bg-emerald-100 text-emerald-700",
+                ),
+                class_name="flex items-center justify-between py-3 border-b border-stone-100",
+            ),
+            # API
+            rx.el.div(
+                rx.icon("braces", class_name="h-5 w-5 text-stone-500"),
+                rx.el.div(
+                    rx.el.p("REST API", class_name="font-medium text-stone-700"),
+                    rx.el.p("Bearer-authenticated API served from the same app: /docs, /health.", class_name="text-xs text-stone-500"),
+                ),
+                rx.el.span(
+                    "Same origin",
                     class_name="text-xs px-2 py-1 rounded-full bg-emerald-100 text-emerald-700",
                 ),
                 class_name="flex items-center justify-between py-3 border-b border-stone-100",
@@ -511,9 +368,7 @@ def settings_page_content() -> rx.Component:
         profile_section(),
         farm_details_section(),
         family_members_section(),
-        language_section(),
-        notification_settings_section(),
-        preferences_section(),
+        data_management_section(),
         install_section(),
         integrations_section(),
         class_name="max-w-4xl mx-auto",

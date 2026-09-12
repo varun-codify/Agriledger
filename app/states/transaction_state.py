@@ -68,16 +68,29 @@ class TransactionState(rx.State):
     @rx.var
     def transactions_grid_data(self) -> list[dict]:
         """Flatten transactions for AG Grid display."""
-        return [
-            {
-                "date": tx["date"],
-                "type": tx["type"],
-                "category_name": tx["category"]["name"],
-                "amount": tx["amount"],
-                "notes": tx.get("notes", ""),
-            }
-            for tx in self.transactions
-        ]
+        result = []
+        for tx in self.transactions:
+            if not tx:
+                continue
+            cat = tx.get("category") if isinstance(tx, dict) else getattr(tx, "category", None)
+            cat_name = ""
+            if isinstance(cat, dict):
+                cat_name = cat.get("name", "")
+            elif cat:
+                cat_name = str(cat)
+            
+            amount_val = tx.get("amount", 0) if isinstance(tx, dict) else getattr(tx, "amount", 0)
+            date_val = tx.get("date", "") if isinstance(tx, dict) else getattr(tx, "date", "")
+            type_val = tx.get("type", "") if isinstance(tx, dict) else getattr(tx, "type", "")
+            notes_val = tx.get("notes", "") if isinstance(tx, dict) else getattr(tx, "notes", "")
+            result.append({
+                "date": str(date_val) if date_val else "",
+                "type": str(type_val) if type_val else "",
+                "category_name": cat_name or "General",
+                "amount": amount_val if amount_val is not None else 0,
+                "notes": str(notes_val) if notes_val else "",
+            })
+        return result
 
     @rx.var
     def amount(self) -> float:

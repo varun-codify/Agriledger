@@ -75,7 +75,7 @@ def milk_quality_insights() -> rx.Component:
         ),
         rx.el.div(
             rx.el.div(
-                rx.icon("check-circle", class_name="h-5 w-5 text-emerald-500"),
+                rx.icon("circle-check", class_name="h-5 w-5 text-emerald-500"),
                 rx.el.p(
                     "Fat percentage is within the optimal range for high-quality milk.",
                     class_name="text-sm text-stone-600 ml-2",

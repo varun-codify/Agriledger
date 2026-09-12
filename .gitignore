@@ -49,7 +49,23 @@ Thumbs.db
 uploaded_files/
 .pytest_cache/
 .ruff_cache/
+*.zip
+*.tar.gz
+*.html
+*.png
+!assets/*.png
+!assets/**/*.png
+*.log
+*.txt
+!apt-packages.txt
+!requirements*.txt
+probe_*.py
+local_probe*.py
 
 # Keep only README.md; all other markdown is excluded
 *.md
 !README.md
+!RECREATION_PROMPT.md
+
+# Next.js frontend (not deployed with main app)
+agriledger-next/

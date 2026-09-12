@@ -1,0 +1,17 @@
+:root {
+    --color-cream-100: #faf8f5;
+    --color-cream-50: #fdfcfb;
+}
+
+body, html, #root {
+    background-color: #faf8f5 !important;
+    color: #1c1917;
+}
+
+.bg-cream-100 {
+    background-color: #faf8f5 !important;
+}
+
+aside {
+    background-color: #faf8f5 !important;
+}

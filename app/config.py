@@ -121,6 +121,11 @@ class AppConfig:
     rate_limit_window_seconds: int = field(default_factory=lambda: int(_get_env("RATE_LIMIT_WINDOW_SECONDS", "60")))
     token_expiry_seconds: int = field(default_factory=lambda: int(_get_env("TOKEN_EXPIRY_SECONDS", "86400")))
 
+    @property
+    def env(self) -> str:
+        return self.app_env
+
+
 
 # Global config singleton
 config = AppConfig()

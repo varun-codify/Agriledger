@@ -23,19 +23,33 @@ from app.database.models import (
     User,
 )
 
+import time
+
 logger = logging.getLogger(__name__)
 
+_USER_CACHE: dict[str, tuple[float, User | None]] = {}
+_SEEDED_FARMS: set[tuple[str, str]] = set()
 
 
+def invalidate_user_cache(email: str) -> None:
+    _USER_CACHE.pop(email.strip().lower(), None)
 
 
 async def get_user_by_email(email: str) -> User | None:
+    normalized_email = email.strip().lower()
+    now = time.time()
+    cached = _USER_CACHE.get(normalized_email)
+    if cached and (now - cached[0] < 60):
+        return cached[1]
     try:
         db = get_db()
-        return await db.users.find_one({"email": email}, {"_id": 0})
+        user = await db.users.find_one({"email": normalized_email}, {"_id": 0})
+        _USER_CACHE[normalized_email] = (now, user)
+        return user
     except Exception as e:
         logging.exception(f"Error fetching user: {e}")
         return None
+
 
 
 async def get_farm(farm_id: str) -> Farm | None:
@@ -78,7 +92,7 @@ async def create_family_member(member: FamilyMember) -> bool:
     """Add a family member record to a farm."""
     try:
         db = get_db()
-        await db.family_members.insert_one(member)
+        await db.family_members.insert_one(_to_plain(member))
         return True
     except Exception as e:
         logging.exception(f"Error creating family member: {e}")
@@ -135,7 +149,7 @@ async def update_user_farm_id(email: str, farm_id: str) -> bool:
 async def create_user(user: User) -> bool:
     try:
         db = get_db()
-        await db.users.insert_one(user)
+        await db.users.insert_one(_to_plain(user))
         return True
     except Exception as e:
         logging.exception(f"Error creating user: {e}")
@@ -155,18 +169,43 @@ async def get_all_cattle(farm_id: str) -> list[Cattle]:
 async def create_cattle(cattle: Cattle) -> bool:
     try:
         db = get_db()
-        await db.cattle.insert_one(cattle)
+        await db.cattle.insert_one(_to_plain(cattle))
         return True
     except Exception as e:
         logging.exception(f"Error creating cattle: {e}")
         return False
 
 
-async def update_cattle(cattle_id: str, updates: dict) -> bool:
+async def update_user_profile(
+    email: str, name: Optional[str] = None, phone: Optional[str] = None
+) -> bool:
+    """Update a user's name and/or phone number."""
     try:
         db = get_db()
-        result = await db.cattle.update_one({"id": cattle_id}, {"$set": updates})
-        return result.modified_count > 0
+        updates = {}
+        if name is not None:
+            updates["name"] = name
+        if phone is not None:
+            updates["phone"] = phone
+        if not updates:
+            return True
+        result = await db.users.update_one({"email": email}, {"$set": updates})
+        return result.matched_count > 0 or result.modified_count > 0
+    except Exception as e:
+        logging.exception(f"Error updating user profile: {e}")
+        return False
+
+
+async def update_cattle(
+    cattle_id: str, updates: dict, farm_id: Optional[str] = None
+) -> bool:
+    try:
+        db = get_db()
+        query = {"id": cattle_id}
+        if farm_id:
+            query["farm_id"] = farm_id
+        result = await db.cattle.update_one(query, {"$set": _to_plain(updates)})
+        return result.matched_count > 0 or result.modified_count > 0
     except Exception as e:
         logging.exception(f"Error updating cattle: {e}")
         return False
@@ -185,18 +224,23 @@ async def get_all_crops(farm_id: str) -> list[Crop]:
 async def create_crop(crop: Crop) -> bool:
     try:
         db = get_db()
-        await db.crops.insert_one(crop)
+        await db.crops.insert_one(_to_plain(crop))
         return True
     except Exception as e:
         logging.exception(f"Error creating crop: {e}")
         return False
 
 
-async def update_crop(crop_id: str, updates: dict) -> bool:
+async def update_crop(
+    crop_id: str, updates: dict, farm_id: Optional[str] = None
+) -> bool:
     try:
         db = get_db()
-        result = await db.crops.update_one({"id": crop_id}, {"$set": updates})
-        return result.modified_count > 0
+        query = {"id": crop_id}
+        if farm_id:
+            query["farm_id"] = farm_id
+        result = await db.crops.update_one(query, {"$set": _to_plain(updates)})
+        return result.matched_count > 0 or result.modified_count > 0
     except Exception as e:
         logging.exception(f"Error updating crop: {e}")
         return False
@@ -215,7 +259,7 @@ async def get_all_transactions(farm_id: str) -> list[Transaction]:
 async def create_transaction(transaction: Transaction) -> bool:
     try:
         db = get_db()
-        await db.transactions.insert_one(transaction)
+        await db.transactions.insert_one(_to_plain(transaction))
         return True
     except Exception as e:
         logging.exception(f"Error creating transaction: {e}")
@@ -252,7 +296,7 @@ async def get_all_coconut_sales(farm_id: str) -> list[CoconutSale]:
 async def create_coconut_sale(sale: CoconutSale) -> bool:
     try:
         db = get_db()
-        await db.coconut_sales.insert_one(sale)
+        await db.coconut_sales.insert_one(_to_plain(sale))
         return True
     except Exception as e:
         logging.exception(f"Error creating coconut sale: {e}")
@@ -272,29 +316,37 @@ async def get_all_milk_sales(farm_id: str) -> list[MilkSale]:
 async def create_milk_sale(sale: MilkSale) -> bool:
     try:
         db = get_db()
-        await db.milk_sales.insert_one(sale)
+        await db.milk_sales.insert_one(_to_plain(sale))
         return True
     except Exception as e:
         logging.exception(f"Error creating milk sale: {e}")
         return False
 
 
-async def update_milk_sale(sale_id: str, updates: dict) -> bool:
+async def update_milk_sale(
+    sale_id: str, updates: dict, farm_id: Optional[str] = None
+) -> bool:
     """Update fields on a single milk sale (e.g. payment status)."""
     try:
         db = get_db()
-        result = await db.milk_sales.update_one({"id": sale_id}, {"$set": updates})
-        return result.modified_count > 0
+        query = {"id": sale_id}
+        if farm_id:
+            query["farm_id"] = farm_id
+        result = await db.milk_sales.update_one(query, {"$set": _to_plain(updates)})
+        return result.matched_count > 0 or result.modified_count > 0
     except Exception as e:
         logging.exception(f"Error updating milk sale: {e}")
         return False
 
 
-async def delete_milk_sale(sale_id: str) -> bool:
+async def delete_milk_sale(sale_id: str, farm_id: Optional[str] = None) -> bool:
     """Delete a milk sale by id (farm-scoped for safety)."""
     try:
         db = get_db()
-        result = await db.milk_sales.delete_one({"id": sale_id})
+        query = {"id": sale_id}
+        if farm_id:
+            query["farm_id"] = farm_id
+        result = await db.milk_sales.delete_one(query)
         return result.deleted_count > 0
     except Exception as e:
         logging.exception(f"Error deleting milk sale: {e}")
@@ -349,18 +401,25 @@ async def get_all_breeding_cycles(farm_id: str) -> list[BreedingCycle]:
 async def create_breeding_cycle(cycle: BreedingCycle) -> bool:
     try:
         db = get_db()
-        await db.breeding_cycles.insert_one(cycle)
+        await db.breeding_cycles.insert_one(_to_plain(cycle))
         return True
     except Exception as e:
         logging.exception(f"Error creating breeding cycle: {e}")
         return False
 
 
-async def update_breeding_cycle(cycle_id: str, updates: dict) -> bool:
+async def update_breeding_cycle(
+    cycle_id: str, updates: dict, farm_id: Optional[str] = None
+) -> bool:
     try:
         db = get_db()
-        result = await db.breeding_cycles.update_one({"id": cycle_id}, {"$set": updates})
-        return result.modified_count > 0
+        query = {"id": cycle_id}
+        if farm_id:
+            query["farm_id"] = farm_id
+        result = await db.breeding_cycles.update_one(
+            query, {"$set": _to_plain(updates)}
+        )
+        return result.matched_count > 0 or result.modified_count > 0
     except Exception as e:
         logging.exception(f"Error updating breeding cycle: {e}")
         return False
@@ -379,7 +438,7 @@ async def get_feed_types(farm_id: str) -> list[FeedType]:
 async def create_feed_type(feed_type: FeedType) -> bool:
     try:
         db = get_db()
-        await db.feed_types.insert_one(feed_type)
+        await db.feed_types.insert_one(_to_plain(feed_type))
         return True
     except Exception as e:
         logging.exception(f"Error creating feed type: {e}")
@@ -399,18 +458,23 @@ async def get_feed_stock(farm_id: str) -> list[FeedStock]:
 async def create_feed_stock(stock: FeedStock) -> bool:
     try:
         db = get_db()
-        await db.feed_stock.insert_one(stock)
+        await db.feed_stock.insert_one(_to_plain(stock))
         return True
     except Exception as e:
         logging.exception(f"Error creating feed stock: {e}")
         return False
 
 
-async def update_feed_stock(stock_id: str, updates: dict) -> bool:
+async def update_feed_stock(
+    stock_id: str, updates: dict, farm_id: Optional[str] = None
+) -> bool:
     try:
         db = get_db()
-        result = await db.feed_stock.update_one({"id": stock_id}, {"$set": updates})
-        return result.modified_count > 0
+        query = {"id": stock_id}
+        if farm_id:
+            query["farm_id"] = farm_id
+        result = await db.feed_stock.update_one(query, {"$set": _to_plain(updates)})
+        return result.matched_count > 0 or result.modified_count > 0
     except Exception as e:
         logging.exception(f"Error updating feed stock: {e}")
         return False
@@ -429,7 +493,7 @@ async def get_feed_consumptions(farm_id: str) -> list[FeedConsumption]:
 async def create_feed_consumption(consumption: FeedConsumption) -> bool:
     try:
         db = get_db()
-        await db.feed_consumptions.insert_one(consumption)
+        await db.feed_consumptions.insert_one(_to_plain(consumption))
         return True
     except Exception as e:
         logging.exception(f"Error creating feed consumption: {e}")
@@ -449,7 +513,7 @@ async def get_feeding_plans(farm_id: str) -> list[FeedingPlan]:
 async def create_feeding_plan(plan: FeedingPlan) -> bool:
     try:
         db = get_db()
-        await db.feeding_plans.insert_one(plan)
+        await db.feeding_plans.insert_one(_to_plain(plan))
         return True
     except Exception as e:
         logging.exception(f"Error creating feeding plan: {e}")
@@ -513,7 +577,7 @@ async def log_activity(
             "timestamp": datetime.now().isoformat(),
             "ip_address": ip_address,
         }
-        await db.activity_logs.insert_one(log_entry)
+        await db.activity_logs.insert_one(_to_plain(log_entry))
         return True
     except Exception as e:
         logging.exception(f"Error logging activity: {e}")
@@ -540,22 +604,25 @@ async def ensure_farm_seed(collection_name: str, farm_id: str, seed_data: list) 
     Each seeded row gets the farm's real farm_id and a freshly generated id so
     demo ids never collide across farms (updates are id-based).
     """
+    if not farm_id or (collection_name, farm_id) in _SEEDED_FARMS:
+        return
     try:
-        # Never seed for anonymous sessions (farm_id is empty before login).
-        if not farm_id:
-            return
         db = get_db()
         collection = db[collection_name]
-        existing = await collection.count_documents({"farm_id": farm_id})
-        if existing > 0 or not seed_data:
+        # Fast indexed lookup instead of counting the entire collection
+        existing = await collection.find_one({"farm_id": farm_id}, {"_id": 1})
+        if existing is not None or not seed_data:
+            _SEEDED_FARMS.add((collection_name, farm_id))
             return
         rows = [
             _to_plain({**item, "id": str(_uuid.uuid4()), "farm_id": farm_id})
             for item in seed_data
         ]
         await collection.insert_many(rows)
+        _SEEDED_FARMS.add((collection_name, farm_id))
         logging.info(
             f"Seeded {collection_name} for farm {farm_id} with {len(rows)} records."
         )
     except Exception as e:
         logging.exception(f"Could not seed {collection_name} for farm {farm_id}: {e}")
+

@@ -125,7 +125,7 @@ def insights_widget() -> rx.Component:
                 rx.foreach(
                     AIInsightsState.seasonal_tips,
                     lambda tip: rx.el.li(
-                        rx.icon("check-circle", class_name="h-4 w-4 text-emerald-500 mr-2"),
+                        rx.icon("circle-check", class_name="h-4 w-4 text-emerald-500 mr-2"),
                         rx.el.span(tip, class_name="text-sm text-stone-600"),
                         class_name="flex items-center py-1",
                     ),

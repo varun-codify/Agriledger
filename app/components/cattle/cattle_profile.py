@@ -498,9 +498,6 @@ def cattle_profile_content() -> rx.Component:
                     "Add Health Note",
                     lambda: CattleState.toggle_health_note_dialog(True),
                 ),
-                profile_action_button(
-                    "pencil", "Edit Details", rx.toast.info("Edit not yet implemented.")
-                ),
                 class_name="flex items-center gap-2",
             ),
             class_name="flex items-center justify-between mb-6",

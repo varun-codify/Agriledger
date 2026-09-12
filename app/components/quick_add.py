@@ -38,8 +38,8 @@ def quick_add_dialog() -> rx.Component:
                             ),
                             class_name=rx.cond(
                                 TransactionState.transaction_type == "income",
-                                "w-full py-2 rounded-lg bg-emerald-500 text-white font-semibold",
-                                "w-full py-2 rounded-lg bg-stone-100 text-stone-700 font-semibold",
+                                "w-full py-2 rounded-lg bg-emerald-500 text-white font-semibold shadow-sm",
+                                "w-full py-2 rounded-lg bg-emerald-50/80 text-emerald-800 border border-emerald-200 font-semibold hover:bg-emerald-100/80 transition-all",
                             ),
                         ),
                         rx.el.button(
@@ -49,8 +49,8 @@ def quick_add_dialog() -> rx.Component:
                             ),
                             class_name=rx.cond(
                                 TransactionState.transaction_type == "expense",
-                                "w-full py-2 rounded-lg bg-red-500 text-white font-semibold",
-                                "w-full py-2 rounded-lg bg-stone-100 text-stone-700 font-semibold",
+                                "w-full py-2 rounded-lg bg-rose-500 text-white font-semibold shadow-sm",
+                                "w-full py-2 rounded-lg bg-rose-50/80 text-rose-800 border border-rose-200 font-semibold hover:bg-rose-100/80 transition-all",
                             ),
                         ),
                         class_name="grid grid-cols-2 gap-2 mb-4",

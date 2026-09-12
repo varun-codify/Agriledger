@@ -561,7 +561,7 @@ def ration_optimizer_panel() -> rx.Component:
     return section(
         "Ration Optimizer",
         "Cheapest feed mix that covers the daily nutrient needs of a group.",
-        "badge-rupee",
+        "badge-indian-rupee",
         rx.el.div(
             rx.el.label(
                 "Animal Group",
@@ -776,7 +776,7 @@ def analytics_stats_panel() -> rx.Component:
                     "kg consumed",
                 ),
                 stat_tile(
-                    "badge-rupee",
+                    "badge-indian-rupee",
                     "Monthly Feed Cost",
                     f"₹{FeedState.monthly_feed_cost:,.0f}",
                     "consumption + purchases",

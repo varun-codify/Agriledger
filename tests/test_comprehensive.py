@@ -5,11 +5,9 @@ services, i18n, and component rendering.
 """
 
 import datetime
-import hashlib
 import os
 from unittest.mock import MagicMock, patch
 
-import pytest
 
 
 # ─── Security / Auth Tests ────────────────────────────────────────────
@@ -218,7 +216,6 @@ class TestModels:
     """Tests for database model definitions."""
 
     def test_user_role_literal(self):
-        from app.database.models import UserRole
 
         valid_roles = ["admin", "worker", "viewer"]
         # UserRole is a Literal type; verify the expected values exist in source
@@ -439,16 +436,14 @@ class TestCattleState:
     """Tests for cattle state computed vars."""
 
     def test_demo_data_populated(self):
-        from app.states.cattle_state import CattleState
+        from app.states.cattle_state import DEMO_CATTLE_DATA
 
-        state = CattleState()  # type: ignore
-        assert len(state.DEMO_CATTLE_DATA) > 0
+        assert len(DEMO_CATTLE_DATA) > 0
 
     def test_demo_data_has_multiple_species(self):
-        from app.states.cattle_state import CattleState
+        from app.states.cattle_state import DEMO_CATTLE_DATA
 
-        state = CattleState()  # type: ignore
-        species = set(c["animal_type"] for c in state.DEMO_CATTLE_DATA)
+        species = set(c["animal_type"] for c in DEMO_CATTLE_DATA)
         assert "cow" in species
         assert "buffalo" in species
         assert "sheep" in species
@@ -470,31 +465,70 @@ class TestUIState:
 
 
 class TestSettingsState:
-    """Tests for settings state."""
+    """Tests for settings state (farm details, profile, JSON backup)."""
 
-    def test_theme_toggle(self):
+    def _make_state(self):
         from app.states.settings_state import SettingsState
 
-        state = SettingsState()  # type: ignore
-        initial = state.theme_mode
-        state.toggle_theme()
-        assert state.theme_mode != initial
+        return SettingsState()  # type: ignore
 
-    def test_language_set(self):
-        from app.states.settings_state import SettingsState
+    def test_farm_details_validation(self):
+        state = self._make_state()
 
-        state = SettingsState()  # type: ignore
-        state.set_language("Tamil")
-        assert state.language == "Tamil"
+        import asyncio
 
-    def test_notification_settings(self):
-        from app.states.settings_state import SettingsState
+        asyncio.run(state.update_farm_details({"farm_name": "", "farm_location": "X"}))
+        assert state.settings_error == "Farm name is required."
 
-        state = SettingsState()  # type: ignore
-        state.update_notification_settings("email", False)
-        assert state.email_alerts is False
-        state.update_notification_settings("sms", True)
-        assert state.sms_alerts is True
+        asyncio.run(state.update_farm_details({"farm_name": "Green Acres", "farm_location": ""}))
+        assert state.settings_error == "Farm location is required."
+
+    def test_backup_data_exports_all_collections(self):
+        import asyncio
+        from unittest.mock import AsyncMock, patch
+
+        state = self._make_state()
+
+        auth_mock = MagicMock()
+        auth_mock.farm_id = "farm-abc"
+
+        def fake_collection(farm_id):
+            return AsyncMock(return_value=[{"id": "x", "farm_id": farm_id}])
+
+        collections = [
+            "get_all_cattle", "get_all_crops", "get_all_transactions",
+            "get_all_milk_sales", "get_all_coconut_sales", "get_all_breeding_cycles",
+            "get_feed_types", "get_feed_stock", "get_feed_consumptions", "get_feeding_plans",
+        ]
+        with patch.object(
+            type(state), "get_state", new=AsyncMock(return_value=auth_mock)
+        ), patch.multiple(
+            "app.database.crud",
+            **{name: fake_collection("farm-abc") for name in collections},
+        ):
+            result = asyncio.run(state.backup_data())
+
+        assert result is not None, "backup_data must return rx.download"
+        assert state.is_exporting is False, "is_exporting must reset in finally"
+
+    def test_backup_data_resets_flag_on_error(self):
+        import asyncio
+        from unittest.mock import AsyncMock, patch
+
+        state = self._make_state()
+        auth_mock = MagicMock()
+        auth_mock.farm_id = "farm-abc"
+
+        with patch.object(
+            type(state), "get_state", new=AsyncMock(return_value=auth_mock)
+        ), patch.multiple(
+            "app.database.crud",
+            get_all_cattle=AsyncMock(side_effect=RuntimeError("db down")),
+        ):
+            result = asyncio.run(state.backup_data())
+
+        assert state.is_exporting is False
+        assert result is not None  # error toast
 
 
 class TestNotificationState:
@@ -552,12 +586,11 @@ class TestBreedingState:
     """Tests for breeding state logic."""
 
     def test_demo_breeding_data(self):
-        from app.states.breeding_state import BreedingState
+        from app.states.breeding_state import DEMO_BREEDING_DATA
 
-        state = BreedingState()  # type: ignore
-        assert len(state.DEMO_BREEDING_DATA) > 0
+        assert len(DEMO_BREEDING_DATA) > 0
         # Should have both cow and buffalo entries
-        types = set(c["cattle_type"] for c in state.DEMO_BREEDING_DATA)
+        types = set(c["cattle_type"] for c in DEMO_BREEDING_DATA)
         assert "cow" in types or "buffalo" in types
 
 
@@ -1080,9 +1113,11 @@ class TestFeedState:
 
     @staticmethod
     def _run(coro):
+        # asyncio.run is order-safe: get_event_loop() breaks after any other
+        # test calls asyncio.run() (it unsets the thread's current loop).
         import asyncio
 
-        return asyncio.get_event_loop().run_until_complete(coro)
+        return asyncio.run(coro)
 
     def _fodder_crop(self, crop_id="c1", qty=50.0, unit="bundles"):
         return {
@@ -1428,7 +1463,7 @@ def test_import_services():
 
 def test_import_i18n():
     """Verify i18n module works."""
-    from app.states.i18n_state import TRANSLATIONS, I18nState
+    from app.states.i18n_state import TRANSLATIONS
 
     assert "English" in TRANSLATIONS
     assert "Tamil" in TRANSLATIONS

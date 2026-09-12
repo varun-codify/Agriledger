@@ -12,72 +12,94 @@ from app.states.auth_state import AuthState
 from app.states.cattle_state import CattleState
 
 
+def _normalize_iso_date(raw: str) -> str | None:
+    """Normalize a date submitted by a browser into ISO (YYYY-MM-DD)."""
+    value = (raw or "").strip()
+    if not value:
+        return None
+    try:
+        return datetime.date.fromisoformat(value).isoformat()
+    except ValueError:
+        pass
+    for fmt in ("%m/%d/%Y", "%m-%d-%Y", "%d/%m/%Y", "%d-%m-%Y", "%d.%m.%Y"):
+        try:
+            return datetime.datetime.strptime(value, fmt).date().isoformat()
+        except ValueError:
+            continue
+    return None
+
+
+# Demo rows seeded into a farm's collection on first load. Kept as a
+# module-level constant (not a state var) so it is never serialized to the
+# browser — state base vars are sent to every client on every page load.
+DEMO_BREEDING_DATA: list[BreedingCycle] = [
+    {
+        "id": "bc1",
+        "cattle_id": "c1",
+        "cattle_name": "Lakshmi",
+        "cattle_type": "cow",
+        "hormone_injection_date": (
+            datetime.date.today() - datetime.timedelta(days=40)
+        ).isoformat(),
+        "insemination_date": (
+            datetime.date.today() - datetime.timedelta(days=35)
+        ).isoformat(),
+        "pregnancy_confirmed": False,
+        "pregnancy_confirmation_date": None,
+        "expected_calving_date": (
+            datetime.date.today() + datetime.timedelta(days=245)
+        ).isoformat(),
+        "follow_up_checks": [],
+        "repeat_breeding_indicator": False,
+        "calf_born": False,
+        "calf_sex": None,
+        "calf_health": None,
+        "birth_outcome": None,
+        "notes": "First cycle for this year.",
+        "status": "pending_confirmation",
+        "created_date": (
+            datetime.date.today() - datetime.timedelta(days=40)
+        ).isoformat(),
+    },
+    {
+        "id": "bc2",
+        "cattle_id": "c2",
+        "cattle_name": "Ganga",
+        "cattle_type": "buffalo",
+        "hormone_injection_date": (
+            datetime.date.today() - datetime.timedelta(days=120)
+        ).isoformat(),
+        "insemination_date": (
+            datetime.date.today() - datetime.timedelta(days=110)
+        ).isoformat(),
+        "pregnancy_confirmed": True,
+        "pregnancy_confirmation_date": (
+            datetime.date.today() - datetime.timedelta(days=80)
+        ).isoformat(),
+        "expected_calving_date": (
+            datetime.date.today() + datetime.timedelta(days=200)
+        ).isoformat(),
+        "follow_up_checks": [
+            {"date": "2024-05-01", "notes": "Ultrasound check normal."}
+        ],
+        "repeat_breeding_indicator": False,
+        "calf_born": False,
+        "calf_sex": None,
+        "calf_health": None,
+        "birth_outcome": None,
+        "notes": "Second pregnancy.",
+        "status": "pregnant",
+        "created_date": (
+            datetime.date.today() - datetime.timedelta(days=120)
+        ).isoformat(),
+    },
+]
+
+
 class BreedingState(rx.State):
     """Manages the state for breeding cycles."""
 
     breeding_cycles: list[BreedingCycle] = []
-    DEMO_BREEDING_DATA: list[BreedingCycle] = [
-        {
-            "id": "bc1",
-            "cattle_id": "c1",
-            "cattle_name": "Lakshmi",
-            "cattle_type": "cow",
-            "hormone_injection_date": (
-                datetime.date.today() - datetime.timedelta(days=40)
-            ).isoformat(),
-            "insemination_date": (
-                datetime.date.today() - datetime.timedelta(days=35)
-            ).isoformat(),
-            "pregnancy_confirmed": False,
-            "pregnancy_confirmation_date": None,
-            "expected_calving_date": (
-                datetime.date.today() + datetime.timedelta(days=245)
-            ).isoformat(),
-            "follow_up_checks": [],
-            "repeat_breeding_indicator": False,
-            "calf_born": False,
-            "calf_sex": None,
-            "calf_health": None,
-            "birth_outcome": None,
-            "notes": "First cycle for this year.",
-            "status": "pending_confirmation",
-            "created_date": (
-                datetime.date.today() - datetime.timedelta(days=40)
-            ).isoformat(),
-        },
-        {
-            "id": "bc2",
-            "cattle_id": "c2",
-            "cattle_name": "Ganga",
-            "cattle_type": "buffalo",
-            "hormone_injection_date": (
-                datetime.date.today() - datetime.timedelta(days=120)
-            ).isoformat(),
-            "insemination_date": (
-                datetime.date.today() - datetime.timedelta(days=110)
-            ).isoformat(),
-            "pregnancy_confirmed": True,
-            "pregnancy_confirmation_date": (
-                datetime.date.today() - datetime.timedelta(days=80)
-            ).isoformat(),
-            "expected_calving_date": (
-                datetime.date.today() + datetime.timedelta(days=200)
-            ).isoformat(),
-            "follow_up_checks": [
-                {"date": "2024-05-01", "notes": "Ultrasound check normal."}
-            ],
-            "repeat_breeding_indicator": False,
-            "calf_born": False,
-            "calf_sex": None,
-            "calf_health": None,
-            "birth_outcome": None,
-            "notes": "Second pregnancy.",
-            "status": "pregnant",
-            "created_date": (
-                datetime.date.today() - datetime.timedelta(days=120)
-            ).isoformat(),
-        },
-    ]
     show_add_breeding_dialog: bool = False
     show_pregnancy_confirmation_dialog: bool = False
     show_calving_record_dialog: bool = False
@@ -91,6 +113,47 @@ class BreedingState(rx.State):
     new_insemination_date: str = datetime.date.today().isoformat()
     add_breeding_error: str = ""
     calving_error: str = ""
+    show_follow_up_dialog: bool = False
+    follow_up_date: str = datetime.date.today().isoformat()
+    follow_up_notes: str = ""
+
+    @rx.event
+    def toggle_follow_up_dialog(self, open: bool):
+        self.show_follow_up_dialog = open
+        if open:
+            self.follow_up_date = datetime.date.today().isoformat()
+            self.follow_up_notes = ""
+
+    @rx.event
+    def set_follow_up_date(self, value: str):
+        self.follow_up_date = value
+
+    @rx.event
+    def set_follow_up_notes(self, value: str):
+        self.follow_up_notes = value
+
+    @rx.event
+    async def submit_follow_up_check(self):
+        """Persist a follow-up check for the cycle on the detail page."""
+        notes = self.follow_up_notes.strip()
+        if not notes:
+            return rx.toast.error("Please add a note for the follow-up check.")
+        if not self.current_breeding_cycle:
+            return rx.toast.error("No breeding cycle selected.")
+        cycle_id = self.current_breeding_cycle["id"]
+        cycle = next((c for c in self.breeding_cycles if c["id"] == cycle_id), None)
+        if cycle is None:
+            return rx.toast.error("Could not find this breeding cycle.")
+        normalized = _normalize_iso_date(self.follow_up_date)
+        if not normalized:
+            return rx.toast.error("Enter a valid date.")
+        cycle["follow_up_checks"].append({"date": normalized, "notes": notes})
+        await crud.update_breeding_cycle(
+            cycle_id, {"follow_up_checks": cycle["follow_up_checks"]}
+        )
+        self.show_follow_up_dialog = False
+        self.follow_up_notes = ""
+        return rx.toast.info("Follow-up check added.")
 
     @rx.event
     def toggle_calving_record_dialog(self, open: bool):
@@ -136,31 +199,44 @@ class BreedingState(rx.State):
     def pregnancy_checks_due(self) -> list[BreedingCycle]:
         """Cycles where pregnancy is not confirmed and 30+ days since insemination."""
         thirty_days_ago = datetime.date.today() - datetime.timedelta(days=30)
-        return [
-            cycle
-            for cycle in self.breeding_cycles
-            if not cycle["pregnancy_confirmed"]
-            and datetime.date.fromisoformat(cycle["insemination_date"])
-            <= thirty_days_ago
-        ]
+        result = []
+        for cycle in self.breeding_cycles:
+            if cycle.get("pregnancy_confirmed"):
+                continue
+            iso = _normalize_iso_date(cycle.get("insemination_date", ""))
+            if not iso:
+                continue
+            try:
+                if datetime.date.fromisoformat(iso) <= thirty_days_ago:
+                    result.append(cycle)
+            except ValueError:
+                continue
+        return result
 
     @rx.var
     def calvings_due_soon(self) -> list[BreedingCycle]:
         """Pregnant cycles with expected calving date within 7 days."""
         next_week = datetime.date.today() + datetime.timedelta(days=7)
-        return [
-            cycle
-            for cycle in self.breeding_cycles
-            if cycle["status"] == "pregnant"
-            and datetime.date.fromisoformat(cycle["expected_calving_date"]) <= next_week
-        ]
+        result = []
+        for cycle in self.breeding_cycles:
+            if cycle.get("status") != "pregnant":
+                continue
+            iso = _normalize_iso_date(cycle.get("expected_calving_date", ""))
+            if not iso:
+                continue
+            try:
+                if datetime.date.fromisoformat(iso) <= next_week:
+                    result.append(cycle)
+            except ValueError:
+                continue
+        return result
 
     @rx.event
     async def fetch_breeding_cycles(self):
         """Fetch cycles from DB (seeds demo data per-farm if empty)."""
         auth = await self.get_state(AuthState)
         await crud.ensure_farm_seed(
-            "breeding_cycles", auth.farm_id, self.DEMO_BREEDING_DATA
+            "breeding_cycles", auth.farm_id, DEMO_BREEDING_DATA
         )
         self.breeding_cycles = await crud.get_all_breeding_cycles(farm_id=auth.farm_id)
 
@@ -192,16 +268,15 @@ class BreedingState(rx.State):
         if not hormone_date_str:
             self.add_breeding_error = "Hormone injection date is mandatory."
             return
-        try:
-            insemination_date = datetime.date.fromisoformat(insemination_date_str)
-        except ValueError:
+        iso_insemination = _normalize_iso_date(insemination_date_str)
+        if not iso_insemination:
             self.add_breeding_error = "Insemination date is invalid."
             return
-        try:
-            datetime.date.fromisoformat(hormone_date_str)
-        except ValueError:
+        iso_hormone = _normalize_iso_date(hormone_date_str)
+        if not iso_hormone:
             self.add_breeding_error = "Hormone injection date is invalid."
             return
+        insemination_date = datetime.date.fromisoformat(iso_insemination)
         gestation_days = 310 if selected_cattle["animal_type"] == "buffalo" else 280
         expected_calving_date = insemination_date + datetime.timedelta(
             days=gestation_days
@@ -211,8 +286,8 @@ class BreedingState(rx.State):
             "cattle_id": selected_cattle["id"],
             "cattle_name": selected_cattle["name"],
             "cattle_type": selected_cattle["animal_type"],
-            "hormone_injection_date": hormone_date_str,
-            "insemination_date": insemination_date_str,
+            "hormone_injection_date": iso_hormone,
+            "insemination_date": iso_insemination,
             "expected_calving_date": expected_calving_date.isoformat(),
             "notes": form_data.get("notes"),
             "status": "pending_confirmation",

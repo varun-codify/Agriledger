@@ -1,4 +1,16 @@
+import json
+from types import SimpleNamespace
+from socketio import AsyncServer
 import reflex as rx
+from reflex.utils import format as reflex_format
+
+# Must run before any component module that imports reflex_ag_grid:
+# switches AG Grid to Community-only so no enterprise trial watermark renders.
+from app.ag_grid_patch import (  # noqa: E402, F401
+    _community_only_add_imports as _,
+)
+
+from app.api import app as api_app  # noqa: E402  # mounted via api_transformer
 
 from app.components.landing import landing_page
 from app.components.layout import dashboard_layout, landing_header
@@ -22,6 +34,7 @@ from app.components.insights.milk_quality import quality_score_card, milk_qualit
 from app.components.transactions.wizard import transaction_wizard
 from app.components.cattle.cattle_list import cattle_management_page
 from app.components.crops.crop_list import crop_management_page
+from app.components.crops.disease_scanner import disease_scanner_page
 from app.components.breeding.breeding_detail import breeding_detail_page
 from app.components.breeding.breeding_list import breeding_list_page
 from app.components.cattle.cattle_profile import cattle_profile_page
@@ -33,14 +46,11 @@ from app.components.feed.feed_page import feed_page
 from app.components.feed.feed_panels import feed_overview_cards
 from app.components.milk.milk_page import milk_page
 from app.states.ai_insights_state import AIInsightsState
-from app.states.cattle_state import CattleState
-from app.states.family_state import FamilyState
-from app.states.feed_state import FeedState
-from app.states.dashboard_state import DashboardState
+from app.states.app_data_state import AppDataState
 from app.states.breeding_state import BreedingState
+from app.states.cattle_state import CattleState
 from app.states.crop_state import CropState
-from app.states.settings_state import SettingsState
-from app.states.transaction_state import TransactionState
+from app.states.dashboard_state import DashboardState
 
 
 def index() -> rx.Component:
@@ -190,7 +200,7 @@ def dashboard_page() -> rx.Component:
                 summary_card(
                     {
                         "title": "Total Lambs",
-                        "icon": "sheep",
+                        "icon": "heart",
                         "value": CattleState.total_lambs,
                         "change": "",
                         "change_type": "up",
@@ -199,12 +209,13 @@ def dashboard_page() -> rx.Component:
                 summary_card(
                     {
                         "title": "Total Kids",
-                        "icon": "goat",
+                        "icon": "activity",
                         "value": CattleState.total_kids,
                         "change": "",
                         "change_type": "up",
                     }
                 ),
+
                 summary_card(
                     {
                         "title": "Coconuts Sold (Month)",
@@ -318,17 +329,114 @@ def breeding_detail_page_route():
     return dashboard_layout(breeding_detail_page(), "Breeding Cycle Details")
 
 
+custom_sio = AsyncServer(
+    async_mode="asgi",
+    cors_allowed_origins="*",
+    cors_credentials=True,
+    max_http_buffer_size=100 * 1024 * 1024,  # 100 MB max buffer size
+    ping_interval=25,
+    ping_timeout=120,
+    json=SimpleNamespace(
+        dumps=staticmethod(reflex_format.json_dumps),
+        loads=staticmethod(json.loads),
+    ),
+    transports=["websocket", "polling"],
+)
+
+
 app = rx.App(
+    sio=custom_sio,
+    # Mount the FastAPI REST API inside the Reflex server: one process/port
+    # serves UI, websockets, and API, and GZip compresses everything.
+    api_transformer=api_app,
+    stylesheets=["/style.css"],
     theme=rx.theme(
         appearance="light",
         props={"Button": {"radius": "medium"}, "TextField": {"radius": "medium"}},
     ),
     head_components=[
+        rx.el.script(src="/ag_patch.js"),
+        rx.el.script(
+            """
+            (function() {
+                try {
+                    localStorage.setItem('theme', 'light');
+                    if (document.documentElement) {
+                        document.documentElement.classList.remove('dark');
+                        document.documentElement.classList.add('light');
+                        document.documentElement.style.colorScheme = 'light';
+                    }
+                } catch(e) {}
+                if (typeof window !== 'undefined' && window.ResizeObserver) {
+                    var _roProto = window.ResizeObserver.prototype;
+                    var _origObserve = _roProto.observe;
+                    _roProto.observe = function(target, options) {
+                        if (target && target instanceof Element) {
+                            return _origObserve.call(this, target, options);
+                        }
+                    };
+                    var _origUnobserve = _roProto.unobserve;
+                    _roProto.unobserve = function(target) {
+                        if (target && target instanceof Element) {
+                            return _origUnobserve.call(this, target);
+                        }
+                    };
+                }
+            })();
+            """
+        ),
         rx.el.link(rel="preconnect", href="https://fonts.googleapis.com"),
         rx.el.link(rel="preconnect", href="https://fonts.gstatic.com", cross_origin=""),
         rx.el.link(
             href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap",
             rel="stylesheet",
+        ),
+        # AG Grid theme tuned to match AgriLedger's stone/emerald design.
+        rx.el.style(
+            """
+            :root {
+                --color-cream-100: #faf8f5;
+                --color-cream-50: #fdfcfb;
+            }
+            body, html, #root {
+                background-color: #faf8f5 !important;
+                color: #1c1917;
+            }
+            .bg-cream-100 {
+                background-color: #faf8f5 !important;
+            }
+            aside {
+                background-color: #faf8f5 !important;
+            }
+            .ag-theme-quartz, .ag-theme-alpine {
+                --ag-font-family: "Lato", ui-sans-serif, system-ui, sans-serif;
+                --ag-font-size: 14px;
+                --ag-foreground-color: #44403c;
+                --ag-data-color: #44403c;
+                --ag-background-color: #ffffff;
+                --ag-header-background-color: #f5f5f4;
+                --ag-header-foreground-color: #44403c;
+                --ag-header-column-hover-background-color: #e7e5e4;
+                --ag-border-color: #e7e5e4;
+                --ag-secondary-border-color: #e7e5e4;
+                --ag-row-hover-color: #f0fdf4;
+                --ag-selected-row-background-color: #d1fae5;
+                --ag-odd-row-background-color: #fafaf9;
+                --ag-border-radius: 8px;
+                --ag-wrapper-border-radius: 10px;
+                border-radius: 10px;
+                overflow: hidden;
+            }
+            .ag-theme-quartz .ag-header-cell,
+            .ag-theme-alpine .ag-header-cell {
+                font-weight: 600;
+            }
+            .ag-theme-quartz .ag-root-wrapper,
+            .ag-theme-alpine .ag-root-wrapper {
+                border-radius: 10px;
+                overflow: hidden;
+            }
+            """
         ),
         # ── PWA / mobile-app metadata ──────────────────────────────────
         # ``viewport-fit=cover`` enables safe-area insets on notched phones;
@@ -378,17 +486,7 @@ app.add_page(register_page, route="/register")
 app.add_page(
     dashboard_page,
     route="/dashboard",
-    on_load=[
-        AuthState.require_login,
-        CattleState.fetch_cattle_list,
-        TransactionState.fetch_transactions,
-        CropState.fetch_crops_list,
-        CropState.fetch_weather,
-        BreedingState.fetch_breeding_cycles,
-        FeedState.fetch_feed_data,
-        FeedState.auto_sync_homegrown_crops,
-        SettingsState.fetch_farm_settings,
-    ],
+    on_load=[AuthState.require_login, AppDataState.load_dashboard_data],
 )
 app.add_page(
     add_transaction_page, route="/add-transaction", on_load=AuthState.require_login
@@ -396,23 +494,19 @@ app.add_page(
 app.add_page(
     cattle_page,
     route="/cattle",
-    on_load=[AuthState.require_login, CattleState.fetch_cattle_list],
+    on_load=[AuthState.require_login, AppDataState.load_page_data],
 )
 app.add_page(
     breeding_page_route,
     route="/cattle/breeding",
-    on_load=[
-        AuthState.require_login,
-        BreedingState.fetch_breeding_cycles,
-        CattleState.fetch_cattle_list,
-    ],
+    on_load=[AuthState.require_login, AppDataState.load_page_data],
 )
 app.add_page(
     breeding_detail_page_route,
     route="/cattle/breeding/[id]",
     on_load=[
         AuthState.require_login,
-        BreedingState.fetch_breeding_cycles,
+        AppDataState.load_page_data,
         BreedingState.load_breeding_detail,
     ],
 )
@@ -421,71 +515,67 @@ app.add_page(
     route="/cattle/[id]",
     on_load=[
         AuthState.require_login,
-        CattleState.fetch_cattle_list,
+        AppDataState.load_page_data,
         CattleState.load_cattle_profile,
     ],
 )
 app.add_page(
+    disease_scanner_page,
+    route="/disease-scanner",
+    on_load=[AuthState.require_login, AppDataState.load_page_data],
+)
+app.add_page(
+    disease_scanner_page,
+    route="/crops/disease-scanner",
+    on_load=[AuthState.require_login, AppDataState.load_page_data],
+)
+app.add_page(
     crops_page,
     route="/crops",
-    on_load=[AuthState.require_login, CropState.fetch_crops_list],
+    on_load=[AuthState.require_login, AppDataState.load_page_data],
 )
 app.add_page(
     crop_profile_page,
     route="/crops/[id]",
     on_load=[
         AuthState.require_login,
-        CropState.fetch_crops_list,
+        AppDataState.load_page_data,
         CropState.load_crop_profile,
     ],
 )
 app.add_page(
     feed_page,
     route="/feed",
-    on_load=[
-        AuthState.require_login,
-        FeedState.fetch_feed_data,
-        CattleState.fetch_cattle_list,
-        CropState.fetch_crops_list,
-        FeedState.auto_sync_homegrown_crops,
-        TransactionState.fetch_transactions,
-    ],
+    on_load=[AuthState.require_login, AppDataState.load_page_data],
 )
 app.add_page(
     insights_hub_page,
     route="/insights",
     on_load=[
         AuthState.require_login,
-        CropState.fetch_weather,
+        AppDataState.load_insights_data,
         AIInsightsState.refresh_insights,
     ],
 )
 app.add_page(
     milk_page,
     route="/milk",
-    on_load=[
-        AuthState.require_login,
-        TransactionState.fetch_transactions,
-        CattleState.fetch_cattle_list,
-    ],
+    on_load=[AuthState.require_login, AppDataState.load_page_data],
 )
-app.add_page(reports_page, route="/reports", on_load=AuthState.require_login)
+app.add_page(
+    reports_page,
+    route="/reports",
+    on_load=[AuthState.require_login, AppDataState.load_reports_data],
+)
 app.add_page(
     settings_page,
     route="/settings",
-    on_load=[
-        AuthState.require_login,
-        SettingsState.fetch_farm_settings,
-        FamilyState.fetch_members,
-    ],
+    on_load=[AuthState.require_login, AppDataState.load_settings_data],
 )
 app.add_page(
     transactions_page,
     route="/transactions",
-    on_load=[
-        AuthState.require_login,
-        TransactionState.fetch_transactions,
-    ],
+    on_load=[AuthState.require_login, AppDataState.load_page_data],
 )
 
 # Routes that were consolidated into other pages still work for old links —

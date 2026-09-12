@@ -79,11 +79,11 @@ def wizard_nav() -> rx.Component:
                 class_name="bg-emerald-500 text-white px-6 py-2 rounded-lg font-semibold hover:bg-emerald-600 transition",
                 disabled=rx.cond(
                     (TransactionState.current_step == 1)
-                    & (TransactionState.transaction_type == None),
+                    & (TransactionState.transaction_type == None),  # noqa: E711 — rx.cond compiles to JS equality
                     True,
                     rx.cond(
                         (TransactionState.current_step == 2)
-                        & (TransactionState.selected_category == None),
+                        & (TransactionState.selected_category == None),  # noqa: E711
                         True,
                         rx.cond(
                             (TransactionState.current_step == 3)

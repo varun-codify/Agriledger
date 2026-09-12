@@ -1,11 +1,16 @@
 import datetime
 import logging
+import time
 import uuid
 from collections import defaultdict
 from typing import TypedDict
 
 import httpx
 import reflex as rx
+
+_WEATHER_CACHE: dict | None = None
+_WEATHER_CACHE_TIME: float = 0.0
+
 
 from app.database import crud
 from app.states.auth_state import AuthState
@@ -46,6 +51,132 @@ class FarmingSuggestion(TypedDict):
     color: str
 
 
+def _clean_weather_data(raw: dict) -> WeatherData:
+    """Reduce an open-meteo response to exactly the declared WeatherData keys.
+
+    Reflex validates state vars assigned against their declared TypedDict and
+    logs a mismatch for every undeclared key (latitude, timezone,
+    current_units, current.time, ...). Picking the declared fields here keeps
+    the stored state clean and shrinks the payload sent to the browser.
+    """
+    current = raw.get("current") or {}
+    daily = raw.get("daily") or {}
+
+    def _int(v) -> int:
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return 0
+
+    def _float(v) -> float:
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return 0.0
+
+    return {
+        "current": {
+            "temperature_2m": _float(current.get("temperature_2m")),
+            "relative_humidity_2m": _int(current.get("relative_humidity_2m")),
+            "precipitation": _float(current.get("precipitation")),
+            "weather_code": _int(current.get("weather_code")),
+            "wind_speed_10m": _float(current.get("wind_speed_10m")),
+        },
+        "daily": {
+            "time": [str(t) for t in (daily.get("time") or [])],
+            "weather_code": [_int(c) for c in (daily.get("weather_code") or [])],
+            "temperature_2m_max": [
+                _float(v) for v in (daily.get("temperature_2m_max") or [])
+            ],
+            "temperature_2m_min": [
+                _float(v) for v in (daily.get("temperature_2m_min") or [])
+            ],
+            "precipitation_sum": [
+                _float(v) for v in (daily.get("precipitation_sum") or [])
+            ],
+            "precipitation_probability_max": [
+                _int(v) for v in (daily.get("precipitation_probability_max") or [])
+            ],
+        },
+    }
+
+
+def _normalize_iso_date(raw: str) -> str | None:
+    """Normalize a date submitted by a browser into ISO (YYYY-MM-DD)."""
+    value = (raw or "").strip()
+    if not value:
+        return None
+    try:
+        return datetime.date.fromisoformat(value).isoformat()
+    except ValueError:
+        pass
+    for fmt in ("%m/%d/%Y", "%m-%d-%Y", "%d/%m/%Y", "%d-%m-%Y", "%d.%m.%Y"):
+        try:
+            return datetime.datetime.strptime(value, fmt).date().isoformat()
+        except ValueError:
+            continue
+    return None
+
+
+# Demo rows seeded into a farm's collection on first load. Kept as a
+# module-level constant (not a state var) so it is never serialized to the
+# browser — state base vars are sent to every client on every page load.
+DEMO_CROPS_DATA: list[Crop] = [
+    {
+        "id": "crop1",
+        "name": "Corn",
+        "field_name": "Field A",
+        "planting_date": "2024-04-15",
+        "status": "Growing",
+        "image_url": "https://api.dicebear.com/9.x/shapes/svg?seed=Corn",
+        "activities": [
+            {
+                "id": "a1",
+                "date": "2024-04-15",
+                "activity_type": "Planting",
+                "notes": "Planted 10 acres of corn.",
+                "cost": 500.0,
+            },
+            {
+                "id": "a2",
+                "date": "2024-05-20",
+                "activity_type": "Fertilizing",
+                "notes": "Applied nitrogen fertilizer.",
+                "cost": 350.0,
+            },
+        ],
+        "harvests": [],
+        "farm_id": "demo-farm",
+    },
+    {
+        "id": "crop2",
+        "name": "Wheat",
+        "field_name": "Field B",
+        "planting_date": "2023-10-01",
+        "status": "Harvested",
+        "image_url": "https://api.dicebear.com/9.x/shapes/svg?seed=Wheat",
+        "activities": [
+            {
+                "id": "a3",
+                "date": "2023-10-01",
+                "activity_type": "Planting",
+                "notes": "Planted 20 acres of wheat.",
+                "cost": 800.0,
+            }
+        ],
+        "harvests": [
+            {
+                "id": "h1",
+                "date": "2024-03-10",
+                "quantity": 1000,
+                "unit": "bushels",
+                "income": 7000.0,
+            }
+        ],
+    },
+]
+
+
 WEATHER_CODES = {
     0: ("Clear sky", "sun"),
     1: ("Mainly clear", "sun"),
@@ -82,60 +213,6 @@ class CropState(rx.State):
     """Manages the state for crop management."""
 
     crops_list: list[Crop] = []
-    DEMO_CROPS_DATA: list[Crop] = [
-        {
-            "id": "crop1",
-            "name": "Corn",
-            "field_name": "Field A",
-            "planting_date": "2024-04-15",
-            "status": "Growing",
-            "image_url": "https://api.dicebear.com/9.x/shapes/svg?seed=Corn",
-            "activities": [
-                {
-                    "id": "a1",
-                    "date": "2024-04-15",
-                    "activity_type": "Planting",
-                    "notes": "Planted 10 acres of corn.",
-                    "cost": 500.0,
-                },
-                {
-                    "id": "a2",
-                    "date": "2024-05-20",
-                    "activity_type": "Fertilizing",
-                    "notes": "Applied nitrogen fertilizer.",
-                    "cost": 350.0,
-                },
-            ],
-            "harvests": [],
-            "farm_id": "demo-farm",
-        },
-        {
-            "id": "crop2",
-            "name": "Wheat",
-            "field_name": "Field B",
-            "planting_date": "2023-10-01",
-            "status": "Harvested",
-            "image_url": "https://api.dicebear.com/9.x/shapes/svg?seed=Wheat",
-            "activities": [
-                {
-                    "id": "a3",
-                    "date": "2023-10-01",
-                    "activity_type": "Planting",
-                    "notes": "Planted 20 acres of wheat.",
-                    "cost": 800.0,
-                }
-            ],
-            "harvests": [
-                {
-                    "id": "h1",
-                    "date": "2024-03-10",
-                    "quantity": 1000,
-                    "unit": "bushels",
-                    "income": 7000.0,
-                }
-            ],
-        },
-    ]
     current_crop: Crop | None = None
     profile_loading: bool = True
     profile_active_tab: str = "Overview"
@@ -177,7 +254,7 @@ class CropState(rx.State):
     async def fetch_crops_list(self):
         """Fetches crops list from DB (seeds demo data per-farm if empty)."""
         auth = await self.get_state(AuthState)
-        await crud.ensure_farm_seed("crops", auth.farm_id, self.DEMO_CROPS_DATA)
+        await crud.ensure_farm_seed("crops", auth.farm_id, DEMO_CROPS_DATA)
         self.crops_list = await crud.get_all_crops(farm_id=auth.farm_id)
 
     @rx.event
@@ -196,6 +273,10 @@ class CropState(rx.State):
         if not planting_date:
             self.add_crop_error = "Planting date is mandatory."
             return
+        iso_planting_date = _normalize_iso_date(planting_date)
+        if not iso_planting_date:
+            self.add_crop_error = "Planting date must be a valid date."
+            return
         initial_cost = 0.0
         if initial_cost_raw:
             try:
@@ -207,13 +288,13 @@ class CropState(rx.State):
             "id": str(uuid.uuid4()),
             "name": name,
             "field_name": field_name,
-            "planting_date": planting_date,
+            "planting_date": iso_planting_date,
             "status": "Planted",
             "image_url": f"https://api.dicebear.com/9.x/shapes/svg?seed={name}",
             "activities": [
                 {
                     "id": str(uuid.uuid4()),
-                    "date": planting_date,
+                    "date": iso_planting_date,
                     "activity_type": "Planting",
                     "notes": "Initial planting.",
                     "cost": initial_cost,
@@ -232,6 +313,14 @@ class CropState(rx.State):
 
     @rx.event(background=True)
     async def fetch_weather(self):
+        global _WEATHER_CACHE, _WEATHER_CACHE_TIME
+        now = time.time()
+        if _WEATHER_CACHE is not None and (now - _WEATHER_CACHE_TIME < 900):
+            async with self:
+                self.weather_data = _WEATHER_CACHE
+                self.weather_loading = False
+            return
+
         async with self:
             self.weather_loading = True
         try:
@@ -243,19 +332,23 @@ class CropState(rx.State):
                 "daily": "weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max",
                 "timezone": "auto",
             }
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=4.0) as client:
                 response = await client.get(
                     "https://api.open-meteo.com/v1/forecast", params=params
                 )
                 response.raise_for_status()
                 data = response.json()
+                cleaned = _clean_weather_data(data)
+                _WEATHER_CACHE = cleaned
+                _WEATHER_CACHE_TIME = now
                 async with self:
-                    self.weather_data = data
+                    self.weather_data = cleaned
                     self.weather_loading = False
         except Exception as e:
             logging.exception(f"Failed to fetch weather data: {e}")
             async with self:
                 self.weather_loading = False
+
 
     def _get_weather_info(self, code: int) -> tuple[str, str]:
         return WEATHER_CODES.get(code, ("Unknown", "cloud-question"))
@@ -438,7 +531,10 @@ class CropState(rx.State):
     def days_since_planting(self) -> int:
         if not self.current_crop:
             return 0
-        planting_date = datetime.date.fromisoformat(self.current_crop["planting_date"])
+        iso = _normalize_iso_date(self.current_crop.get("planting_date", ""))
+        if not iso:
+            return 0
+        planting_date = datetime.date.fromisoformat(iso)
         return (datetime.date.today() - planting_date).days
 
     @rx.var

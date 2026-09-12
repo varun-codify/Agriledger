@@ -1021,7 +1021,6 @@ class FeedState(rx.State):
     def _build_recommendations(self, cattle_list: list[dict]) -> list[dict]:
         """Rule-based AI nutrition advisor (sync — testable, works offline)."""
         recs = []
-        ft_map = self._feed_type_map()
         concentrates = [ft for ft in self.feed_types if ft["category"] == "Concentrate"]
         green = [
             ft
@@ -1115,7 +1114,6 @@ class FeedState(rx.State):
     @rx.var
     def smart_alerts(self) -> list[dict]:
         alerts = []
-        ft_map = self._feed_type_map()
         # Stock levels
         for stock in self.inventory:
             if stock["quantity"] <= 0:
@@ -1169,7 +1167,6 @@ class FeedState(rx.State):
     @rx.var
     def purchase_suggestions(self) -> list[dict]:
         suggestions = []
-        ft_map = self._feed_type_map()
         remaining: dict[str, float] = defaultdict(float)
         for stock in self.inventory:
             remaining[stock["feed_type_id"]] += stock["quantity"]

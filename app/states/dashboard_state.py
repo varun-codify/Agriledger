@@ -105,6 +105,17 @@ class DashboardState(rx.State):
     active_pie_slice_name: str = ""
     active_pie_slice_value: str = ""
 
+    @staticmethod
+    def _parse_date(value) -> datetime.date | None:
+        """Parse an ISO date string defensively; None when malformed.
+
+        One malformed date in the database must never take down a computed
+        var (and with it the whole dashboard render).
+        """
+        try:
+            return datetime.date.fromisoformat(str(value))
+        except (TypeError, ValueError):
+            return None
     # ── Computed metrics (real data, with demo fallbacks) ────────────────
 
     @rx.var
@@ -117,15 +128,18 @@ class DashboardState(rx.State):
         milk_month_sales = [
             s
             for s in ts.milk_sales
-            if datetime.date.fromisoformat(s["date"]).month == today.month
-            and datetime.date.fromisoformat(s["date"]).year == today.year
+            if (d := self._parse_date(s.get("date"))) is not None
+            and d.month == today.month
+            and d.year == today.year
         ]
         milk_litres_month = sum(float(s.get("liters", 0)) for s in milk_month_sales)
         milk_income_month = sum(float(s.get("total_price", 0)) for s in milk_month_sales)
         coconut_month = sum(
             1
             for s in ts.coconut_sales
-            if datetime.date.fromisoformat(s["date"]).month == today.month
+            if (d := self._parse_date(s.get("date"))) is not None
+            and d.month == today.month
+            and d.year == today.year
         )
         return [
             {"title": "Total Income", "icon": "trending-up", "value": f"₹{income:,.0f}", "change": "", "change_type": "up"},
@@ -228,8 +242,9 @@ class DashboardState(rx.State):
         current_month_sales = [
             s
             for s in ts.coconut_sales
-            if datetime.date.fromisoformat(s["date"]).month == today.month
-            and datetime.date.fromisoformat(s["date"]).year == today.year
+            if (d := self._parse_date(s.get("date"))) is not None
+            and d.month == today.month
+            and d.year == today.year
         ]
         return sum((s["coconut_count"] for s in current_month_sales))
 
@@ -240,8 +255,9 @@ class DashboardState(rx.State):
         current_month_sales = [
             s
             for s in ts.coconut_sales
-            if datetime.date.fromisoformat(s["date"]).month == today.month
-            and datetime.date.fromisoformat(s["date"]).year == today.year
+            if (d := self._parse_date(s.get("date"))) is not None
+            and d.month == today.month
+            and d.year == today.year
         ]
         return sum((s["total_amount"] for s in current_month_sales))
 
@@ -252,7 +268,8 @@ class DashboardState(rx.State):
         recent_sales = [
             s
             for s in ts.milk_sales
-            if datetime.date.fromisoformat(s["date"]) >= last_week
+            if (d := self._parse_date(s.get("date"))) is not None
+            and d >= last_week
         ]
         if not recent_sales:
             return 0.0
@@ -266,7 +283,8 @@ class DashboardState(rx.State):
         recent_sales = [
             s
             for s in ts.milk_sales
-            if datetime.date.fromisoformat(s["date"]) >= last_week
+            if (d := self._parse_date(s.get("date"))) is not None
+            and d >= last_week
         ]
         if not recent_sales:
             return 0.0
@@ -279,8 +297,12 @@ class DashboardState(rx.State):
         sales_by_month = defaultdict(lambda: {"volume": 0, "revenue": 0})
         today = datetime.date.today()
         for sale in ts.coconut_sales:
-            sale_date = datetime.date.fromisoformat(sale["date"])
-            if (today.year - sale_date.year) * 12 + (today.month - sale_date.month) < 6:
+            sale_date = self._parse_date(sale.get("date"))
+            if sale_date is None or (
+                (today.year - sale_date.year) * 12
+                + (today.month - sale_date.month)
+            ) >= 6:
+                continue
                 month_key = sale_date.strftime("%b %Y")
                 sales_by_month[month_key]["volume"] += sale["coconut_count"]
                 sales_by_month[month_key]["revenue"] += sale["total_amount"]
@@ -305,13 +327,14 @@ class DashboardState(rx.State):
             [
                 s
                 for s in ts.milk_sales
-                if datetime.date.fromisoformat(s["date"]) >= last_30_days
+                if (d := self._parse_date(s.get("date"))) is not None
+                and d >= last_30_days
             ],
             key=lambda s: s["date"],
         )
         return [
             {
-                "day": datetime.datetime.fromisoformat(s["date"]).strftime("%b %d"),
+                "day": datetime.date.fromisoformat(s["date"]).strftime("%b %d"),
                 "fat_percentage": s["fat_percentage"],
             }
             for s in recent_sales
@@ -325,13 +348,14 @@ class DashboardState(rx.State):
             [
                 s
                 for s in ts.milk_sales
-                if datetime.date.fromisoformat(s["date"]) >= last_30_days
+                if (d := self._parse_date(s.get("date"))) is not None
+                and d >= last_30_days
             ],
             key=lambda s: s["date"],
         )
         return [
             {
-                "day": datetime.datetime.fromisoformat(s["date"]).strftime("%b %d"),
+                "day": datetime.date.fromisoformat(s["date"]).strftime("%b %d"),
                 "snf_percentage": s["snf_percentage"],
             }
             for s in recent_sales

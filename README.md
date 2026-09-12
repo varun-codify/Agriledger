@@ -59,12 +59,21 @@ cp .env.example .env
 ### Run the app
 
 ```bash
-# Reflex web app (main UI) — http://localhost:3000
+# Optimized run (fast DNS, DB caching, automated index creation)
+python run.py
+
+# Or directly with reflex
 reflex run
 
-# FastAPI REST API (optional) — http://localhost:8000/docs
-uvicorn app.api:app --reload
+# Production mode — compiled frontend bundle
+reflex run --env prod
 ```
+
+The FastAPI REST API (`/api/*`, `/users/*`, `/auth/token`, `/health`) is mounted
+inside the Reflex server via `api_transformer`, serving both the UI and REST API on port 3000.
+Interactive API docs: `http://localhost:3000/api/docs`.
+
+
 
 ---
 
@@ -111,8 +120,8 @@ your live URL. Optional env vars: `GEMINI_API_KEY` (AI + bill-scanning),
 
 ```
 app/
-├── app.py               # Entry point — page routes, on_load hooks
-├── api.py               # FastAPI REST API (register/login/users) with bearer auth
+├── app.py               # Entry point — page routes, on_load hooks, API mount
+├── api.py               # FastAPI REST API (mounted into the Reflex server)
 ├── config.py            # Centralized, validated configuration
 ├── security.py          # bcrypt hashing + HMAC-signed bearer tokens
 ├── components/          # UI building blocks (pages & widgets)
@@ -129,7 +138,7 @@ app/
 └── middleware/          # In-memory rate limiter
 ```
 
-**Data flow:** Reflex states → `crud.py` (async Motor) → MongoDB. The FastAPI layer shares the same `connection.get_db()` client.
+**Data flow:** Reflex states → `crud.py` (async Motor) → MongoDB. The FastAPI layer shares the same `connection.get_db()` client. Page loads fetch all data in parallel via `app_data_state.py` (`asyncio.gather`) instead of one DB round-trip per widget.
 
 ---
 
@@ -146,7 +155,9 @@ The suite covers password hashing, config, models, i18n translations, service st
 ## 🔐 Security Notes
 
 - Passwords hashed with **bcrypt** (never stored in plaintext).
-- API tokens are HMAC-SHA256 signed and expire (`SECRET_KEY` required in production).
+- UI sessions are signed, HttpOnly cookies — they survive server restarts, and the user's password hash is never serialized to the browser.
+- REST API tokens are HMAC-SHA256 signed and expire (`SECRET_KEY` required in production).
 - Login lockout after 5 failed attempts (15-minute window).
-- Rate limiting middleware on the API; CORS restricted to explicit origins.
+- Rate limiting middleware on the API (Reflex infra paths like `/_event` and `/_static` are exempt); CORS restricted to explicit origins.
+- Security headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`) on API responses.
 - Roles are assigned server-side (`viewer` on registration) — clients cannot self-promote.
