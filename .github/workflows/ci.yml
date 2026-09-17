@@ -32,5 +32,6 @@ jobs:
         env:
           TESTING: "true"
           SECRET_KEY: "test-secret-key-for-ci"
+          PYTHONPATH: "."
         run: |
-          pytest -v
+          python -m pytest -v
