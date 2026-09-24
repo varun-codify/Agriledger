@@ -290,7 +290,10 @@ class DiseaseScannerState(rx.State):
 
             # Save uploaded image to assets folder as a lightweight web asset to prevent WebSocket buffer congestion
             try:
-                import io, os, time
+                import io
+                import os
+                import time
+
                 from PIL import Image
 
                 assets_dir = os.path.join(os.getcwd(), "assets")

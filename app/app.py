@@ -1,4 +1,4 @@
-import json
+﻿import json
 from types import SimpleNamespace
 from socketio import AsyncServer
 import reflex as rx
@@ -12,9 +12,11 @@ from app.ag_grid_patch import (  # noqa: E402, F401
 
 from app.api import app as api_app  # noqa: E402  # mounted via api_transformer
 
+from app.components.common import segmented_control, spinner
 from app.components.landing import landing_page
 from app.components.layout import dashboard_layout, landing_header
 from app.states.auth_state import AuthState
+from app.states.ui_state import UIState
 
 from app.components.dashboard import (
     breeding_alerts_card,
@@ -65,44 +67,83 @@ def index() -> rx.Component:
 
 def login_page() -> rx.Component:
     """The login page."""
+    email_error = AuthState.field_errors["email"]
+    password_error = AuthState.field_errors["password"]
     return rx.el.div(
         rx.el.div(
             rx.el.a(
                 rx.icon("leaf", class_name="h-8 w-8 text-emerald-500"),
                 href="/",
-                class_name="mb-8",
+                class_name="mb-8 block",
             ),
-            rx.el.h2("Welcome Back", class_name="text-3xl font-bold text-stone-800"),
-            rx.el.p("Log in to manage your farm.", class_name="text-stone-600 mt-2"),
+            rx.el.h2(
+                "Welcome Back",
+                class_name="text-3xl font-bold text-stone-800 dark:text-stone-100 al-fade-up",
+            ),
+            rx.el.p(
+                "Log in to manage your farm.",
+                class_name="text-stone-600 mt-2 dark:text-stone-400 al-fade-up",
+            ),
             rx.el.form(
                 rx.el.div(
                     rx.el.input(
                         placeholder="Email",
                         type="email",
                         name="email",
-                        class_name="w-full px-4 py-3 rounded-lg border border-stone-300 focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition",
+                        on_change=AuthState.clear_errors,
+                        class_name=rx.cond(
+                            email_error != "",
+                            "w-full px-4 py-3 rounded-lg border-2 border-red-400 bg-red-50/50 text-stone-800 focus:ring-2 focus:ring-red-400 focus:border-transparent transition al-shake dark:bg-red-950/30 dark:text-stone-100",
+                            "w-full px-4 py-3 rounded-lg border border-stone-300 bg-white text-stone-800 focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition dark:bg-stone-800 dark:border-stone-600 dark:text-stone-100",
+                        ),
+                    ),
+                    rx.cond(
+                        email_error != "",
+                        rx.el.p(
+                            email_error,
+                            class_name="text-red-500 text-sm mt-1 al-fade-up",
+                        ),
+                        None,
                     ),
                     rx.el.input(
                         placeholder="Password",
                         type="password",
                         name="password",
-                        class_name="w-full px-4 py-3 rounded-lg border border-stone-300 focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition",
+                        on_change=AuthState.clear_errors,
+                        class_name=rx.cond(
+                            password_error != "",
+                            "w-full px-4 py-3 rounded-lg border-2 border-red-400 bg-red-50/50 text-stone-800 focus:ring-2 focus:ring-red-400 focus:border-transparent transition al-shake dark:bg-red-950/30 dark:text-stone-100",
+                            "w-full px-4 py-3 rounded-lg border border-stone-300 bg-white text-stone-800 focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition dark:bg-stone-800 dark:border-stone-600 dark:text-stone-100",
+                        ),
+                    ),
+                    rx.cond(
+                        password_error != "",
+                        rx.el.p(
+                            password_error,
+                            class_name="text-red-500 text-sm mt-1 al-fade-up",
+                        ),
+                        None,
                     ),
                     rx.cond(
                         AuthState.error_message != "",
                         rx.el.div(
                             rx.icon("flag_triangle_right", class_name="h-4 w-4 mr-2"),
                             AuthState.error_message,
-                            class_name="text-red-500 text-sm flex items-center bg-red-50 p-2 rounded-md",
+                            class_name="text-red-500 text-sm flex items-center bg-red-50 p-2 rounded-md dark:bg-red-950/40",
                         ),
                         None,
                     ),
                     class_name="space-y-4 mt-8",
                 ),
                 rx.el.button(
-                    "Log In",
+                    rx.cond(
+                        AuthState.is_loading,
+                        spinner("h-5 w-5"),
+                        rx.el.span("Log In"),
+                    ),
                     type="submit",
-                    class_name="w-full bg-emerald-500 text-white mt-6 py-3 rounded-lg font-semibold hover:bg-emerald-600 transition shadow-sm",
+                    disabled=AuthState.is_loading,
+                    class_name="w-full bg-emerald-500 text-white mt-6 py-3 rounded-lg font-semibold hover:bg-emerald-600 transition shadow-sm active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2",
                 ),
                 on_submit=AuthState.login,
             ),
@@ -111,11 +152,11 @@ def login_page() -> rx.Component:
                 rx.el.a(
                     "Sign up",
                     href="/register",
-                    class_name="font-semibold text-emerald-600",
+                    class_name="font-semibold text-emerald-600 hover:text-emerald-700 transition-colors",
                 ),
-                class_name="mt-6 text-center text-stone-600",
+                class_name="mt-6 text-center text-stone-600 dark:text-stone-400",
             ),
-            class_name="bg-white p-8 md:p-12 rounded-2xl shadow-lg w-full max-w-md",
+            class_name="bg-white p-8 md:p-12 rounded-2xl shadow-lg w-full max-w-md al-modal-in dark:bg-stone-900 dark:border dark:border-stone-700",
         ),
         class_name="min-h-screen flex items-center justify-center bg-cream-100 font-['Lato'] p-4",
     )
@@ -123,186 +164,269 @@ def login_page() -> rx.Component:
 
 def register_page() -> rx.Component:
     """The registration page."""
+    def _input(placeholder: str, type_: str, name: str) -> rx.Component:
+        err = AuthState.field_errors[name]
+        base = "w-full px-4 py-3 rounded-lg focus:ring-2 transition dark:bg-stone-800 dark:text-stone-100 "
+        ok = "border border-stone-300 bg-white text-stone-800 dark:bg-stone-800 dark:text-stone-100 focus:ring-emerald-500 focus:border-transparent dark:border-stone-600"
+        bad = "border-2 border-red-400 bg-red-50/50 focus:ring-red-400 focus:border-transparent al-shake dark:bg-red-950/30"
+        return rx.el.div(
+            rx.el.input(
+                placeholder=placeholder,
+                type=type_,
+                name=name,
+                on_change=AuthState.clear_errors,
+                class_name=rx.cond(err != "", base + bad, base + ok),
+            ),
+            rx.cond(
+                err != "",
+                rx.el.p(err, class_name="text-red-500 text-sm mt-1 al-fade-up"),
+                None,
+            ),
+        )
+
     return rx.el.div(
         rx.el.div(
             rx.el.a(
                 rx.icon("leaf", class_name="h-8 w-8 text-emerald-500"),
                 href="/",
-                class_name="mb-8",
+                class_name="mb-8 block",
             ),
             rx.el.h2(
-                "Create Your Account", class_name="text-3xl font-bold text-stone-800"
+                "Create Your Account",
+                class_name="text-3xl font-bold text-stone-800 dark:text-stone-100 al-fade-up",
             ),
             rx.el.p(
-                "Start managing your farm today.", class_name="text-stone-600 mt-2"
+                "Start managing your farm today.",
+                class_name="text-stone-600 mt-2 dark:text-stone-400 al-fade-up",
             ),
             rx.el.form(
                 rx.el.div(
-                    rx.el.input(
-                        placeholder="Full Name",
-                        name="name",
-                        class_name="w-full px-4 py-3 rounded-lg border border-stone-300 focus:ring-2 focus:ring-emerald-500 transition",
-                    ),
-                    rx.el.input(
-                        placeholder="Email",
-                        type="email",
-                        name="email",
-                        class_name="w-full px-4 py-3 rounded-lg border border-stone-300 focus:ring-2 focus:ring-emerald-500 transition",
-                    ),
-                    rx.el.input(
-                        placeholder="Password",
-                        type="password",
-                        name="password",
-                        class_name="w-full px-4 py-3 rounded-lg border border-stone-300 focus:ring-2 focus:ring-emerald-500 transition",
-                    ),
-                    rx.el.input(
-                        placeholder="Confirm Password",
-                        type="password",
-                        name="confirm_password",
-                        class_name="w-full px-4 py-3 rounded-lg border border-stone-300 focus:ring-2 focus:ring-emerald-500 transition",
-                    ),
+                    _input("Full Name", "text", "name"),
+                    _input("Email", "email", "email"),
+                    _input("Password", "password", "password"),
+                    _input("Confirm Password", "password", "confirm_password"),
                     rx.cond(
                         AuthState.error_message != "",
                         rx.el.div(
                             rx.icon("flag_triangle_right", class_name="h-4 w-4 mr-2"),
                             AuthState.error_message,
-                            class_name="text-red-500 text-sm flex items-center bg-red-50 p-2 rounded-md",
+                            class_name="text-red-500 text-sm flex items-center bg-red-50 p-2 rounded-md dark:bg-red-950/40",
                         ),
                         None,
                     ),
                     class_name="space-y-4 mt-8",
                 ),
                 rx.el.button(
-                    "Create Account",
+                    rx.cond(
+                        AuthState.is_loading,
+                        spinner("h-5 w-5"),
+                        rx.el.span("Create Account"),
+                    ),
                     type="submit",
-                    class_name="w-full bg-emerald-500 text-white mt-6 py-3 rounded-lg font-semibold hover:bg-emerald-600 transition shadow-sm",
+                    disabled=AuthState.is_loading,
+                    class_name="w-full bg-emerald-500 text-white mt-6 py-3 rounded-lg font-semibold hover:bg-emerald-600 transition shadow-sm active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2",
                 ),
                 on_submit=AuthState.register,
             ),
             rx.el.p(
                 "Already have an account? ",
                 rx.el.a(
-                    "Log in", href="/login", class_name="font-semibold text-emerald-600"
+                    "Log in",
+                    href="/login",
+                    class_name="font-semibold text-emerald-600 hover:text-emerald-700 transition-colors",
                 ),
-                class_name="mt-6 text-center text-stone-600",
+                class_name="mt-6 text-center text-stone-600 dark:text-stone-400",
             ),
-            class_name="bg-white p-8 md:p-12 rounded-2xl shadow-lg w-full max-w-md",
+            class_name="bg-white p-8 md:p-12 rounded-2xl shadow-lg w-full max-w-md al-modal-in dark:bg-stone-900 dark:border dark:border-stone-700",
         ),
         class_name="min-h-screen flex items-center justify-center bg-cream-100 font-['Lato'] p-4",
     )
 
 
-def dashboard_page() -> rx.Component:
-    """The main dashboard page."""
-    return dashboard_layout(
+def _dashboard_skeleton() -> rx.Component:
+    """Pulse skeleton shown while dashboard data is loading."""
+    kpi = rx.el.div(
+        rx.el.div(class_name="h-4 w-24 bg-stone-200 rounded animate-pulse dark:bg-stone-700"),
+        rx.el.div(class_name="h-8 w-16 bg-stone-200 rounded mt-3 animate-pulse dark:bg-stone-700"),
+        class_name="bg-white dark:bg-stone-900 p-5 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-700",
+    )
+    chart = rx.el.div(
+        rx.el.div(class_name="h-5 w-40 bg-stone-200 rounded animate-pulse dark:bg-stone-700"),
+        rx.el.div(class_name="h-52 w-full bg-stone-100 rounded-xl mt-4 animate-pulse dark:bg-stone-800"),
+        class_name="bg-white dark:bg-stone-900 p-5 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-700",
+    )
+    return rx.el.div(
+        rx.el.div(*([kpi] * 5), class_name="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6"),
+        rx.el.div(class_name="h-10 w-72 bg-stone-200 rounded-xl mt-6 animate-pulse dark:bg-stone-700"),
+        rx.el.div(*([chart] * 2), class_name="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6"),
+        class_name="al-fade-up",
+    )
+
+
+def _dashboard_kpis() -> rx.Component:
+    """Top KPI strip — always visible across all dashboard tabs."""
+    return rx.el.div(
+        summary_card(
+            {
+                "title": "Total Lambs",
+                "icon": "heart",
+                "value": CattleState.total_lambs,
+                "change": "",
+                "change_type": "up",
+            }
+        ),
+        summary_card(
+            {
+                "title": "Total Kids",
+                "icon": "activity",
+                "value": CattleState.total_kids,
+                "change": "",
+                "change_type": "up",
+            }
+        ),
+        summary_card(
+            {
+                "title": "Coconuts Sold (Month)",
+                "icon": "tree-palm",
+                "value": DashboardState.total_coconuts_sold_month,
+                "change": "",
+                "change_type": "up",
+            }
+        ),
+        summary_card(
+            {
+                "title": "Avg Fat % (Week)",
+                "icon": "activity",
+                "value": f"{DashboardState.avg_fat_percentage_week}%",
+                "change": "",
+                "change_type": "up",
+            }
+        ),
+        summary_card(
+            {
+                "title": "Avg SNF % (Week)",
+                "icon": "activity",
+                "value": f"{DashboardState.avg_snf_percentage_week}%",
+                "change": "",
+                "change_type": "up",
+            }
+        ),
+        class_name="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6",
+    )
+
+
+def _dashboard_tab_bar() -> rx.Component:
+    """Segmented control that switches the dashboard body section."""
+    return segmented_control(
+        UIState.dashboard_tab,
+        [
+            ("overview", "Overview", "layout-dashboard"),
+            ("analytics", "Analytics", "chart-column"),
+            ("production", "Production", "wheat"),
+        ],
+        UIState.set_dashboard_tab,
+        container_class="mb-6",
+    )
+
+
+def _dashboard_overview_tab() -> rx.Component:
+    """Health, AI insights, weather, reminders, recent activity."""
+    return rx.el.div(
+        rx.el.div(
+            health_score_card(),
+            insights_widget(),
+            class_name="grid grid-cols-1 lg:grid-cols-2 gap-6",
+        ),
+        rx.el.div(
+            weather_card(),
+            reminders_card(),
+            class_name="mt-6 grid grid-cols-1 lg:grid-cols-6 gap-6",
+        ),
+        rx.el.div(
+            recent_transactions_list(),
+            breeding_alerts_card(),
+            class_name="mt-6 grid grid-cols-1 lg:grid-cols-6 gap-6",
+        ),
+    )
+
+
+def _dashboard_analytics_tab() -> rx.Component:
+    """Financial + production charts."""
+    return rx.el.div(
+        rx.el.div(
+            expense_pie_chart(),
+            coconut_sales_chart(),
+            class_name="grid grid-cols-1 lg:grid-cols-6 gap-6",
+        ),
+        rx.el.div(
+            fat_percentage_trend_chart(),
+            snf_percentage_trend_chart(),
+            class_name="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6",
+        ),
+        rx.el.div(
+            milk_trend_line_chart(),
+            class_name="mt-6 grid grid-cols-1 lg:grid-cols-6 gap-6",
+        ),
+    )
+
+
+def _dashboard_production_tab() -> rx.Component:
+    """Milk quality + feed intelligence deep-dives."""
+    return rx.el.div(
+        rx.el.div(
+            rx.el.h2(
+                "Milk Quality",
+                class_name="text-lg font-semibold text-stone-800 dark:text-stone-100",
+            ),
+            rx.el.a(
+                "Open Milk & Society Bills →",
+                href="/milk",
+                class_name="text-sm font-semibold text-emerald-600 hover:text-emerald-700",
+            ),
+            class_name="flex items-center justify-between mb-4",
+        ),
+        rx.el.div(
+            quality_score_card(),
+            milk_quality_insights(),
+            class_name="grid grid-cols-1 lg:grid-cols-2 gap-6",
+        ),
         rx.el.div(
             rx.el.div(
-                summary_card(
-                    {
-                        "title": "Total Lambs",
-                        "icon": "heart",
-                        "value": CattleState.total_lambs,
-                        "change": "",
-                        "change_type": "up",
-                    }
+                rx.el.h2(
+                    "Feed Intelligence",
+                    class_name="text-lg font-semibold text-stone-800 dark:text-stone-100",
                 ),
-                summary_card(
-                    {
-                        "title": "Total Kids",
-                        "icon": "activity",
-                        "value": CattleState.total_kids,
-                        "change": "",
-                        "change_type": "up",
-                    }
+                rx.el.a(
+                    "Open Feed Module →",
+                    href="/feed",
+                    class_name="text-sm font-semibold text-emerald-600 hover:text-emerald-700",
                 ),
+                class_name="flex items-center justify-between mb-4 mt-8",
+            ),
+            feed_overview_cards(),
+        ),
+    )
 
-                summary_card(
-                    {
-                        "title": "Coconuts Sold (Month)",
-                        "icon": "tree-palm",
-                        "value": DashboardState.total_coconuts_sold_month,
-                        "change": "",
-                        "change_type": "up",
-                    }
-                ),
-                summary_card(
-                    {
-                        "title": "Avg Fat % (Week)",
-                        "icon": "activity",
-                        "value": f"{DashboardState.avg_fat_percentage_week}%",
-                        "change": "",
-                        "change_type": "up",
-                    }
-                ),
-                summary_card(
-                    {
-                        "title": "Avg SNF % (Week)",
-                        "icon": "activity",
-                        "value": f"{DashboardState.avg_snf_percentage_week}%",
-                        "change": "",
-                        "change_type": "up",
-                    }
-                ),
-                class_name="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6",
-            ),
+
+def dashboard_page() -> rx.Component:
+    """The main dashboard page (KPI strip + tabbed body)."""
+    return dashboard_layout(
+        rx.cond(
+            AppDataState.is_loading,
+            _dashboard_skeleton(),
             rx.el.div(
-                health_score_card(),
-                insights_widget(),
-                class_name="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6",
-            ),
-            rx.el.div(
-                expense_pie_chart(),
-                breeding_alerts_card(),
-                coconut_sales_chart(),
-                class_name="mt-6 grid grid-cols-1 lg:grid-cols-6 gap-6",
-            ),
-            rx.el.div(
-                fat_percentage_trend_chart(),
-                snf_percentage_trend_chart(),
-                class_name="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6",
-            ),
-            rx.el.div(
-                milk_trend_line_chart(),
-                recent_transactions_list(),
-                class_name="mt-6 grid grid-cols-1 lg:grid-cols-6 gap-6",
-            ),
-            rx.el.div(
-                weather_card(),
-                reminders_card(),
-                class_name="mt-6 grid grid-cols-1 lg:grid-cols-6 gap-6",
-            ),
-            rx.el.div(
-                rx.el.div(
-                    rx.el.h2(
-                        "Milk Quality",
-                        class_name="text-lg font-semibold text-stone-800",
+                _dashboard_kpis(),
+                rx.el.div(class_name="h-6"),
+                _dashboard_tab_bar(),
+                rx.cond(
+                    UIState.dashboard_tab == "overview",
+                    _dashboard_overview_tab(),
+                    rx.cond(
+                        UIState.dashboard_tab == "analytics",
+                        _dashboard_analytics_tab(),
+                        _dashboard_production_tab(),
                     ),
-                    rx.el.a(
-                        "Open Milk & Society Bills →",
-                        href="/milk",
-                        class_name="text-sm font-semibold text-emerald-600 hover:text-emerald-700",
-                    ),
-                    class_name="flex items-center justify-between mb-4",
                 ),
-                quality_score_card(),
-                milk_quality_insights(),
-                class_name="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6",
-            ),
-            rx.el.div(
-                rx.el.div(
-                    rx.el.h2(
-                        "Feed Intelligence",
-                        class_name="text-lg font-semibold text-stone-800",
-                    ),
-                    rx.el.a(
-                        "Open Feed Module →",
-                        href="/feed",
-                        class_name="text-sm font-semibold text-emerald-600 hover:text-emerald-700",
-                    ),
-                    class_name="flex items-center justify-between mb-4",
-                ),
-                feed_overview_cards(),
-                class_name="mt-6",
             ),
         ),
         page_title="Dashboard Overview",
@@ -355,88 +479,15 @@ app = rx.App(
         props={"Button": {"radius": "medium"}, "TextField": {"radius": "medium"}},
     ),
     head_components=[
+        # Restores saved theme + ResizeObserver guard (never force-locks light).
         rx.el.script(src="/ag_patch.js"),
-        rx.el.script(
-            """
-            (function() {
-                try {
-                    localStorage.setItem('theme', 'light');
-                    if (document.documentElement) {
-                        document.documentElement.classList.remove('dark');
-                        document.documentElement.classList.add('light');
-                        document.documentElement.style.colorScheme = 'light';
-                    }
-                } catch(e) {}
-                if (typeof window !== 'undefined' && window.ResizeObserver) {
-                    var _roProto = window.ResizeObserver.prototype;
-                    var _origObserve = _roProto.observe;
-                    _roProto.observe = function(target, options) {
-                        if (target && target instanceof Element) {
-                            return _origObserve.call(this, target, options);
-                        }
-                    };
-                    var _origUnobserve = _roProto.unobserve;
-                    _roProto.unobserve = function(target) {
-                        if (target && target instanceof Element) {
-                            return _origUnobserve.call(this, target);
-                        }
-                    };
-                }
-            })();
-            """
-        ),
+        # Landing scroll-reveal (no-ops on pages without .reveal-on-scroll).
+        rx.el.script(src="/reveal.js"),
         rx.el.link(rel="preconnect", href="https://fonts.googleapis.com"),
         rx.el.link(rel="preconnect", href="https://fonts.gstatic.com", cross_origin=""),
         rx.el.link(
             href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap",
             rel="stylesheet",
-        ),
-        # AG Grid theme tuned to match AgriLedger's stone/emerald design.
-        rx.el.style(
-            """
-            :root {
-                --color-cream-100: #faf8f5;
-                --color-cream-50: #fdfcfb;
-            }
-            body, html, #root {
-                background-color: #faf8f5 !important;
-                color: #1c1917;
-            }
-            .bg-cream-100 {
-                background-color: #faf8f5 !important;
-            }
-            aside {
-                background-color: #faf8f5 !important;
-            }
-            .ag-theme-quartz, .ag-theme-alpine {
-                --ag-font-family: "Lato", ui-sans-serif, system-ui, sans-serif;
-                --ag-font-size: 14px;
-                --ag-foreground-color: #44403c;
-                --ag-data-color: #44403c;
-                --ag-background-color: #ffffff;
-                --ag-header-background-color: #f5f5f4;
-                --ag-header-foreground-color: #44403c;
-                --ag-header-column-hover-background-color: #e7e5e4;
-                --ag-border-color: #e7e5e4;
-                --ag-secondary-border-color: #e7e5e4;
-                --ag-row-hover-color: #f0fdf4;
-                --ag-selected-row-background-color: #d1fae5;
-                --ag-odd-row-background-color: #fafaf9;
-                --ag-border-radius: 8px;
-                --ag-wrapper-border-radius: 10px;
-                border-radius: 10px;
-                overflow: hidden;
-            }
-            .ag-theme-quartz .ag-header-cell,
-            .ag-theme-alpine .ag-header-cell {
-                font-weight: 600;
-            }
-            .ag-theme-quartz .ag-root-wrapper,
-            .ag-theme-alpine .ag-root-wrapper {
-                border-radius: 10px;
-                overflow: hidden;
-            }
-            """
         ),
         # ── PWA / mobile-app metadata ──────────────────────────────────
         # ``viewport-fit=cover`` enables safe-area insets on notched phones;
@@ -486,7 +537,11 @@ app.add_page(register_page, route="/register")
 app.add_page(
     dashboard_page,
     route="/dashboard",
-    on_load=[AuthState.require_login, AppDataState.load_dashboard_data],
+    on_load=[
+        AuthState.require_login,
+        AppDataState.load_dashboard_data,
+        UIState.set_dashboard_tab("overview"),
+    ],
 )
 app.add_page(
     add_transaction_page, route="/add-transaction", on_load=AuthState.require_login

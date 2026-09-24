@@ -34,12 +34,12 @@ def _section_heading(title: str, subtitle: str, id_: str = "") -> rx.Component:
         _section_badge(title.split()[0] if title.split() else title),
         rx.el.h2(
             title,
-            class_name="text-3xl md:text-5xl font-bold text-stone-800 text-center",
+            class_name="text-3xl md:text-5xl font-bold text-stone-800 text-center al-fade-up",
             id=id_ if id_ else None,
         ),
         rx.el.p(
             subtitle,
-            class_name="mt-4 text-lg md:text-xl text-stone-600 text-center max-w-2xl mx-auto",
+            class_name="mt-4 text-lg md:text-xl text-stone-600 text-center max-w-2xl mx-auto al-fade-up",
         ),
         class_name="text-center",
     )
@@ -1044,13 +1044,13 @@ def landing_page() -> rx.Component:
     """The main landing page component."""
     return rx.el.div(
         hero_section(),
-        story_section(),
-        how_it_works_section(),
-        features_section(),
-        testimonials_section(),
-        impact_section(),
-        about_section(),
-        pricing_section(),
-        final_cta_section(),
+        rx.el.div(story_section(), class_name="reveal-on-scroll"),
+        rx.el.div(how_it_works_section(), class_name="reveal-on-scroll"),
+        rx.el.div(features_section(), class_name="reveal-on-scroll"),
+        rx.el.div(testimonials_section(), class_name="reveal-on-scroll"),
+        rx.el.div(impact_section(), class_name="reveal-on-scroll"),
+        rx.el.div(about_section(), class_name="reveal-on-scroll"),
+        rx.el.div(pricing_section(), class_name="reveal-on-scroll"),
+        rx.el.div(final_cta_section(), class_name="reveal-on-scroll"),
         footer_section(),
     )

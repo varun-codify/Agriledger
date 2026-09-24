@@ -1,4 +1,4 @@
-import reflex as rx
+﻿import reflex as rx
 
 from app.components.breeding.breeding_table import breeding_grid
 from app.components.common import segmented_control
@@ -14,17 +14,17 @@ def breeding_cycle_card(cycle: rx.Var[dict]) -> rx.Component:
         ("pregnant", "bg-emerald-100 text-emerald-800"),
         ("calved", "bg-blue-100 text-blue-800"),
         ("not_pregnant", "bg-red-100 text-red-800"),
-        "bg-stone-100 text-stone-800",
+        "bg-stone-100 text-stone-800 dark:bg-stone-800 dark:text-stone-100",
     )
     return rx.el.a(
         rx.el.div(
             rx.el.div(
                 rx.el.p(
-                    cycle["cattle_name"], class_name="font-bold text-lg text-stone-800"
+                    cycle["cattle_name"], class_name="font-bold text-lg text-stone-800 dark:text-stone-100"
                 ),
                 rx.el.p(
                     f"Inseminated: {cycle['insemination_date']}",
-                    class_name="text-xs text-stone-500",
+                    class_name="text-xs text-stone-500 dark:text-stone-400",
                 ),
                 class_name="flex-1",
             ),
@@ -36,9 +36,9 @@ def breeding_cycle_card(cycle: rx.Var[dict]) -> rx.Component:
         ),
         rx.el.div(
             rx.el.div(
-                rx.icon("calendar-check-2", class_name="h-4 w-4 text-stone-500"),
+                rx.icon("calendar-check-2", class_name="h-4 w-4 text-stone-500 dark:text-stone-400"),
                 rx.el.p(
-                    "Pregnancy Check:", class_name="text-sm font-medium text-stone-600"
+                    "Pregnancy Check:", class_name="text-sm font-medium text-stone-600 dark:text-stone-300"
                 ),
                 rx.el.p(
                     cycle["pregnancy_confirmation_date"] | "Pending",
@@ -47,9 +47,9 @@ def breeding_cycle_card(cycle: rx.Var[dict]) -> rx.Component:
                 class_name="flex items-center gap-2",
             ),
             rx.el.div(
-                rx.icon("baby", class_name="h-4 w-4 text-stone-500"),
+                rx.icon("baby", class_name="h-4 w-4 text-stone-500 dark:text-stone-400"),
                 rx.el.p(
-                    "Est. Calving:", class_name="text-sm font-medium text-stone-600"
+                    "Est. Calving:", class_name="text-sm font-medium text-stone-600 dark:text-stone-300"
                 ),
                 rx.el.p(
                     cycle["expected_calving_date"], class_name="text-sm font-semibold"
@@ -59,7 +59,7 @@ def breeding_cycle_card(cycle: rx.Var[dict]) -> rx.Component:
             class_name="mt-4 flex justify-between text-sm",
         ),
         href=f"/cattle/breeding/{cycle['id']}",
-        class_name="bg-white p-4 rounded-2xl shadow-sm border border-stone-100 hover:shadow-lg hover:-translate-y-1 transition-all",
+        class_name="bg-white p-4 rounded-2xl shadow-sm border border-stone-100 hover:shadow-lg hover:-translate-y-1 transition-all dark:bg-stone-900 dark:border-stone-700",
     )
 
 
@@ -71,7 +71,7 @@ def filter_button(label: str, filter_value: str) -> rx.Component:
         class_name=rx.cond(
             is_selected,
             "px-4 py-1.5 rounded-lg text-sm font-semibold bg-emerald-500 text-white shadow-sm",
-            "px-4 py-1.5 rounded-lg text-sm font-semibold bg-white text-stone-600 border hover:bg-stone-50",
+            "px-4 py-1.5 rounded-lg text-sm font-semibold bg-white text-stone-600 border hover:bg-stone-50 dark:bg-stone-800 dark:text-stone-300 dark:border-stone-600 dark:hover:bg-stone-700",
         ),
     )
 
@@ -111,7 +111,7 @@ def alert_item(icon: str, title: str, items: rx.Var[list], color: str) -> rx.Com
                     class_name="text-sm",
                 ),
             ),
-            class_name="list-disc list-inside mt-2 space-y-1 text-stone-700",
+            class_name="list-disc list-inside mt-2 space-y-1 text-stone-700 dark:text-stone-300",
         ),
         class_name=f"bg-{color}-50 border-l-4 border-{color}-500 p-4 rounded-r-lg",
     )
@@ -146,12 +146,12 @@ def add_breeding_dialog() -> rx.Component:
         rx.el.div(
             rx.el.div(
                 on_click=lambda: BreedingState.toggle_add_breeding_dialog(False),
-                class_name="fixed inset-0 bg-black/50 z-40",
+                class_name="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 al-fade-in",
             ),
             rx.el.div(
                 rx.el.h2(
                     "Start New Breeding Cycle",
-                    class_name="text-2xl font-bold text-stone-800",
+                    class_name="text-2xl font-bold text-stone-800 dark:text-stone-100",
                 ),
                 rx.cond(
                     BreedingState.add_breeding_error != "",
@@ -168,7 +168,7 @@ def add_breeding_dialog() -> rx.Component:
                     rx.el.div(
                         rx.el.label(
                             "Select Animal (Cow/Buffalo)",
-                            class_name="text-sm font-medium",
+                            class_name="text-sm font-medium dark:text-stone-200",
                         ),
                         rx.el.select(
                             rx.foreach(
@@ -176,31 +176,31 @@ def add_breeding_dialog() -> rx.Component:
                                 lambda c: rx.el.option(c["name"], value=c["id"]),
                             ),
                             name="cattle_id",
-                            class_name="mt-1 w-full p-2 border rounded-md",
+                            class_name="mt-1 w-full p-2 border rounded-md dark:bg-stone-800 dark:border-stone-600 dark:text-stone-100 min-h-[40px]",
                         ),
                         rx.el.label(
-                            "Hormone Injection Date", class_name="text-sm font-medium"
+                            "Hormone Injection Date", class_name="text-sm font-medium dark:text-stone-200"
                         ),
                         rx.el.input(
                             name="hormone_injection_date",
                             type="date",
                             default_value=BreedingState.new_hormone_date,
-                            class_name="mt-1 w-full p-2 border rounded-md",
+                            class_name="mt-1 w-full p-2 border rounded-md dark:bg-stone-800 dark:border-stone-600 dark:text-stone-100 min-h-[40px]",
                         ),
                         rx.el.label(
-                            "Insemination Date", class_name="text-sm font-medium"
+                            "Insemination Date", class_name="text-sm font-medium dark:text-stone-200"
                         ),
                         rx.el.input(
                             name="insemination_date",
                             type="date",
                             default_value=BreedingState.new_insemination_date,
-                            class_name="mt-1 w-full p-2 border rounded-md",
+                            class_name="mt-1 w-full p-2 border rounded-md dark:bg-stone-800 dark:border-stone-600 dark:text-stone-100 min-h-[40px]",
                         ),
                         rx.el.label(
-                            "Notes (optional)", class_name="text-sm font-medium"
+                            "Notes (optional)", class_name="text-sm font-medium dark:text-stone-200"
                         ),
                         rx.el.textarea(
-                            name="notes", class_name="mt-1 w-full p-2 border rounded-md"
+                            name="notes", class_name="mt-1 w-full p-2 border rounded-md dark:bg-stone-800 dark:border-stone-600 dark:text-stone-100 min-h-[40px]"
                         ),
                         class_name="space-y-4 my-6",
                     ),
@@ -211,7 +211,7 @@ def add_breeding_dialog() -> rx.Component:
                             on_click=lambda: BreedingState.toggle_add_breeding_dialog(
                                 False
                             ),
-                            class_name="w-full py-2 rounded-lg bg-stone-200 text-stone-800 font-semibold",
+                            class_name="w-full py-2 rounded-lg bg-stone-200 text-stone-800 font-semibold transition-all hover:bg-stone-300 active:scale-[0.98] dark:bg-stone-700 dark:text-stone-100 dark:hover:bg-stone-600",
                         ),
                         rx.el.button(
                             "Start Cycle",
@@ -222,7 +222,7 @@ def add_breeding_dialog() -> rx.Component:
                     ),
                     on_submit=BreedingState.add_breeding_cycle,
                 ),
-                class_name="bg-white p-8 rounded-2xl shadow-xl w-full max-w-lg z-50 max-h-[90vh] overflow-y-auto",
+                class_name="al-modal-in bg-white dark:bg-stone-900 p-8 rounded-2xl shadow-xl w-full max-w-lg z-50 max-h-[90vh] overflow-y-auto border border-stone-100 dark:border-stone-700",
             ),
             class_name="fixed inset-0 flex items-center justify-center p-4 z-50",
         ),

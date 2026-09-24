@@ -23,6 +23,7 @@ class ReportsState(rx.State):
     custom_end_date: str = datetime.date.today().isoformat()
     generated_file_url: str = ""
     show_download_link: bool = False
+    is_generating: bool = False
 
     def _transactions_in_range(self, transactions: list[dict]) -> list[dict]:
         """Filter transactions by the selected date range."""
@@ -73,7 +74,7 @@ class ReportsState(rx.State):
                 name = tx["category"]["name"]
                 totals[name] = totals.get(name, 0.0) + float(tx["amount"])
         top = sorted(totals.items(), key=lambda kv: kv[1], reverse=True)[:5]
-        fills = ["#10b981", "#f97316", "#3b82f6", "#f59e0b", "#8b5cf6"]
+        fills = ["#10b981", "#f97316", "#06b6d4", "#f59e0b", "#8b5cf6"]
         return [
             {"name": name, "value": round(value), "fill": fills[i % len(fills)]}
             for i, (name, value) in enumerate(top)
@@ -98,6 +99,9 @@ class ReportsState(rx.State):
     @rx.event
     async def generate_pdf_report(self):
         """Generates a PDF report from real transaction data."""
+        if self.is_generating:
+            return None
+        self.is_generating = True
         try:
             ts = await self.get_state(TransactionState)
             in_range = self._transactions_in_range(ts.transactions)
@@ -130,10 +134,15 @@ class ReportsState(rx.State):
         except Exception as e:
             logging.exception(f"Error generating PDF: {e}")
             return rx.toast.error(f"Error generating PDF: {str(e)}")
+        finally:
+            self.is_generating = False
 
     @rx.event
     async def generate_excel_report(self):
         """Generates an Excel report from real transaction data."""
+        if self.is_generating:
+            return None
+        self.is_generating = True
         try:
             ts = await self.get_state(TransactionState)
             in_range = self._transactions_in_range(ts.transactions)
@@ -167,3 +176,5 @@ class ReportsState(rx.State):
         except Exception as e:
             logging.exception(f"Error generating Excel: {e}")
             return rx.toast.error(f"Error generating Excel: {str(e)}")
+        finally:
+            self.is_generating = False

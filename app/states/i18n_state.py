@@ -227,7 +227,10 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
 class I18nState(rx.State):
     """Internationalization state for multi-language support."""
 
-    language: str = "English"
+    # Persisted in a cookie so the choice survives reloads and new tabs.
+    language: str = rx.Cookie(
+        "English", name="agriledger_lang", same_site="lax", max_age=60 * 60 * 24 * 365
+    )
 
     @rx.var
     def t(self) -> dict[str, str]:
@@ -236,7 +239,8 @@ class I18nState(rx.State):
 
     @rx.event
     def set_language(self, lang: str):
-        self.language = lang
+        if lang in TRANSLATIONS:
+            self.language = lang
 
     def translate(self, key: str) -> str:
         """Translate a key to the current language."""

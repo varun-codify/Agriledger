@@ -61,7 +61,7 @@ _DEMO_SUMMARY_METRICS: list[SummaryMetric] = [
 _DEMO_EXPENSE_DATA: list[ExpenseData] = [
     {"name": "Feed", "value": 400, "fill": "#10b981"},
     {"name": "Medicine", "value": 300, "fill": "#f97316"},
-    {"name": "Labor", "value": 300, "fill": "#3b82f6"},
+    {"name": "Labor", "value": 300, "fill": "#06b6d4"},
     {"name": "Utilities", "value": 200, "fill": "#f59e0b"},
     {"name": "Other", "value": 278, "fill": "#8b5cf6"},
 ]
@@ -90,10 +90,10 @@ _DEMO_REMINDERS: list[Reminder] = [
 _EXPENSE_FILLS = [
     "#10b981",
     "#f97316",
-    "#3b82f6",
+    "#06b6d4",
     "#f59e0b",
     "#8b5cf6",
-    "#06b6d4",
+    "#ec4899",
     "#ef4444",
     "#64748b",
 ]

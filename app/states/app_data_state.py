@@ -31,6 +31,10 @@ logger = logging.getLogger(__name__)
 class AppDataState(rx.State):
     """Loads all page data in parallel behind a single event."""
 
+    # True while a page's data load is in flight — drives skeleton loaders.
+    # Starts True so the first dashboard paint shows skeletons, not empty cards.
+    is_loading: bool = True
+
     async def _gather_or_log(self, coros: list, label: str) -> None:
         """Run fetch coroutines concurrently; failures are logged, never fatal."""
         results = await asyncio.gather(*coros, return_exceptions=True)
@@ -42,38 +46,42 @@ class AppDataState(rx.State):
 
     async def _load_core(self, include_weather: bool = False) -> None:
         """Shared loader: hydrate session, then fetch in parallel."""
-        auth = await self.get_state(AuthState)
-        if not auth.is_logged_in:
-            return rx.redirect("/login")
-        await auth.hydrate_user()
-        if not auth.farm_id:
-            return None
-
-        cattle_state = await self.get_state(CattleState)
-        tx_state = await self.get_state(TransactionState)
-        crop_state = await self.get_state(CropState)
-        breeding_state = await self.get_state(BreedingState)
-        feed_state = await self.get_state(FeedState)
-        settings_state = await self.get_state(SettingsState)
-
-        coros = [
-            cattle_state.fetch_cattle_list(),
-            tx_state.fetch_transactions(),
-            crop_state.fetch_crops_list(),
-            breeding_state.fetch_breeding_cycles(),
-            feed_state.fetch_feed_data(),
-            settings_state.fetch_farm_settings(),
-        ]
-        if include_weather:
-            coros.append(crop_state.fetch_weather())
-        await self._gather_or_log(coros, "core")
-
-        # Auto-sync depends on crops + feed being loaded; runs once at the end.
+        self.is_loading = True
         try:
-            await feed_state.auto_sync_homegrown_crops()
-        except Exception as e:  # noqa: BLE001 - a failed sync must not break the page
-            logger.warning("Crop-to-feed auto-sync failed: %s", e)
-        return None
+            auth = await self.get_state(AuthState)
+            if not auth.is_logged_in:
+                return rx.redirect("/login")
+            await auth.hydrate_user()
+            if not auth.farm_id:
+                return None
+
+            cattle_state = await self.get_state(CattleState)
+            tx_state = await self.get_state(TransactionState)
+            crop_state = await self.get_state(CropState)
+            breeding_state = await self.get_state(BreedingState)
+            feed_state = await self.get_state(FeedState)
+            settings_state = await self.get_state(SettingsState)
+
+            coros = [
+                cattle_state.fetch_cattle_list(),
+                tx_state.fetch_transactions(),
+                crop_state.fetch_crops_list(),
+                breeding_state.fetch_breeding_cycles(),
+                feed_state.fetch_feed_data(),
+                settings_state.fetch_farm_settings(),
+            ]
+            if include_weather:
+                coros.append(crop_state.fetch_weather())
+            await self._gather_or_log(coros, "core")
+
+            # Auto-sync depends on crops + feed being loaded; runs once at the end.
+            try:
+                await feed_state.auto_sync_homegrown_crops()
+            except Exception as e:  # noqa: BLE001 - a failed sync must not break the page
+                logger.warning("Crop-to-feed auto-sync failed: %s", e)
+            return None
+        finally:
+            self.is_loading = False
 
     @rx.event
     async def load_dashboard_data(self):

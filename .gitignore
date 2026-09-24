@@ -69,3 +69,4 @@ local_probe*.py
 
 # Next.js frontend (not deployed with main app)
 agriledger-next/
+.vercel

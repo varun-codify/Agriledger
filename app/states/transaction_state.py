@@ -34,6 +34,7 @@ class TransactionState(rx.State):
     payment_status: str = "pending"
     show_quick_add: bool = False
     active_table_tab: str = "all"  # "all" | "milk" | "coconut"
+    is_submitting: bool = False
     expense_categories: list[Category] = [
         {"name": "Cattle Feed", "icon": "wheat"},
         {"name": "Medicine", "icon": "syringe"},
@@ -311,67 +312,87 @@ class TransactionState(rx.State):
 
     @rx.event
     async def submit_transaction(self):
-        if not self.transaction_type or not self.selected_category:
-            return rx.toast.error("Type and category are required.")
-        category_name = self.selected_category["name"]
-        if category_name == "Coconut Sales":
-            if self.coconut_count <= 0 or self.price_per_coconut <= 0:
-                return rx.toast.error("Coconut count and price must be positive.")
-            total_amount = self.coconut_total_amount
-            new_sale: CoconutSale = {
-                "id": str(datetime.datetime.now().timestamp()),
-                "date": self.date,
-                "coconut_count": self.coconut_count,
-                "price_per_coconut": self.price_per_coconut,
-                "total_amount": total_amount,
-                "buyer": self.buyer or None,
-                "notes": self.notes or None,
-                "farm_id": (await self.get_state(AuthState)).farm_id,
-            }
-            if await crud.create_coconut_sale(new_sale):
-                self.coconut_sales.append(new_sale)
-                await self._create_and_add_transaction(
-                    total_amount, f"Sold {self.coconut_count} coconuts"
+        if self.is_submitting:
+            return None
+        self.is_submitting = True
+        try:
+            if not self.transaction_type or not self.selected_category:
+                return rx.toast.error("Type and category are required.")
+            category_name = self.selected_category["name"]
+            if category_name == "Coconut Sales":
+                if self.coconut_count <= 0 or self.price_per_coconut <= 0:
+                    return rx.toast.error("Coconut count and price must be positive.")
+                total_amount = self.coconut_total_amount
+                new_sale: CoconutSale = {
+                    "id": str(datetime.datetime.now().timestamp()),
+                    "date": self.date,
+                    "coconut_count": self.coconut_count,
+                    "price_per_coconut": self.price_per_coconut,
+                    "total_amount": total_amount,
+                    "buyer": self.buyer or None,
+                    "notes": self.notes or None,
+                    "farm_id": (await self.get_state(AuthState)).farm_id,
+                }
+                if await crud.create_coconut_sale(new_sale):
+                    self.coconut_sales.append(new_sale)
+                    await self._create_and_add_transaction(
+                        total_amount, f"Sold {self.coconut_count} coconuts"
+                    )
+            elif category_name == "Milk Sale":
+                if self.liters <= 0 or self.rate_per_liter <= 0:
+                    return rx.toast.error("Liters and rate must be positive.")
+                if not 0 <= self.fat_percentage <= 10:
+                    return rx.toast.error("Fat percentage must be between 0 and 10.")
+                if not 6 <= self.snf_percentage <= 12:
+                    return rx.toast.error("SNF percentage must be between 6 and 12.")
+                total_price = self.milk_total_price
+                new_sale: MilkSale = {
+                    "id": str(datetime.datetime.now().timestamp()),
+                    "date": self.date,
+                    "animal_id": self.animal_id or None,
+                    "liters": self.liters,
+                    "fat_percentage": self.fat_percentage,
+                    "snf_percentage": self.snf_percentage,
+                    "clr": self.clr or None,
+                    "water_ratio": self.water_ratio or None,
+                    "rate_per_liter": self.rate_per_liter,
+                    "total_price": total_price,
+                    "buyer": self.buyer or None,
+                    "bill_number": self.bill_number or None,
+                    "payment_status": self.payment_status,
+                    "paid_date": (
+                        self.date if self.payment_status == "paid" else None
+                    ),
+                    "notes": self.notes or None,
+                    "farm_id": (await self.get_state(AuthState)).farm_id,
+                }
+                if await crud.create_milk_sale(new_sale):
+                    self.milk_sales.append(new_sale)
+                    await self._create_and_add_transaction(
+                        total_price, f"Sold {self.liters}L of milk"
+                    )
+            else:
+                if self.amount <= 0:
+                    return rx.toast.error("Amount must be positive.")
+                await self._create_and_add_transaction(self.amount, self.notes)
+            self.reset_wizard()
+            try:
+                from app.states.notification_state import NotificationState
+
+                notif = await self.get_state(NotificationState)
+                notif.add_notification(
+                    {
+                        "title": "Transaction added",
+                        "message": f"{category_name} recorded successfully.",
+                        "type": "success",
+                        "timestamp": self.date,
+                    }
                 )
-        elif category_name == "Milk Sale":
-            if self.liters <= 0 or self.rate_per_liter <= 0:
-                return rx.toast.error("Liters and rate must be positive.")
-            if not 0 <= self.fat_percentage <= 10:
-                return rx.toast.error("Fat percentage must be between 0 and 10.")
-            if not 6 <= self.snf_percentage <= 12:
-                return rx.toast.error("SNF percentage must be between 6 and 12.")
-            total_price = self.milk_total_price
-            new_sale: MilkSale = {
-                "id": str(datetime.datetime.now().timestamp()),
-                "date": self.date,
-                "animal_id": self.animal_id or None,
-                "liters": self.liters,
-                "fat_percentage": self.fat_percentage,
-                "snf_percentage": self.snf_percentage,
-                "clr": self.clr or None,
-                "water_ratio": self.water_ratio or None,
-                "rate_per_liter": self.rate_per_liter,
-                "total_price": total_price,
-                "buyer": self.buyer or None,
-                "bill_number": self.bill_number or None,
-                "payment_status": self.payment_status,
-                "paid_date": (
-                    self.date if self.payment_status == "paid" else None
-                ),
-                "notes": self.notes or None,
-                "farm_id": (await self.get_state(AuthState)).farm_id,
-            }
-            if await crud.create_milk_sale(new_sale):
-                self.milk_sales.append(new_sale)
-                await self._create_and_add_transaction(
-                    total_price, f"Sold {self.liters}L of milk"
-                )
-        else:
-            if self.amount <= 0:
-                return rx.toast.error("Amount must be positive.")
-            await self._create_and_add_transaction(self.amount, self.notes)
-        self.reset_wizard()
-        return rx.toast.success("Transaction added successfully!")
+            except Exception:
+                pass
+            return rx.toast.success("Transaction added successfully!")
+        finally:
+            self.is_submitting = False
 
     @rx.event
     def set_active_table_tab(self, tab: str):

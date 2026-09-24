@@ -14,11 +14,41 @@ class UIState(rx.State):
     }
     # Active tab on the consolidated Insights & AI page.
     insights_tab: str = "weather"  # "weather" | "ai"
+    # Dashboard content tabs (progressive disclosure — keeps the page scannable).
+    dashboard_tab: str = "overview"  # "overview" | "analytics" | "production"
     # Mobile slide-in navigation drawer (shown below the md breakpoint).
     mobile_nav_open: bool = False
     # Whether the browser has a deferred install prompt ready to show
     # (set by ``check_install_status``, consumed by ``install_app``).
     install_prompt_available: bool = False
+    # Dark mode (mirrors the ``dark`` class on <html>; persisted in localStorage).
+    dark_mode: bool = False
+
+    @rx.event
+    def init_theme(self):
+        """Sync ``dark_mode`` state with the class already applied by ag_patch.js."""
+        return rx.call_script(
+            "return document.documentElement.classList.contains('dark');",
+            callback=UIState.set_dark_mode,
+        )
+
+    @rx.event
+    def set_dark_mode(self, dark: bool):
+        self.dark_mode = bool(dark)
+
+    @rx.event
+    def toggle_theme(self):
+        """Flip dark/light mode and persist the choice in localStorage."""
+        self.dark_mode = not self.dark_mode
+        theme = "dark" if self.dark_mode else "light"
+        return rx.call_script(
+            f"""
+            document.documentElement.classList.toggle('dark', {str(self.dark_mode).lower()});
+            document.documentElement.classList.toggle('light', {str(not self.dark_mode).lower()});
+            document.documentElement.style.colorScheme = '{theme}';
+            try {{ localStorage.setItem('theme', '{theme}'); }} catch(e) {{}}
+            """
+        )
 
     @rx.event
     def toggle_sidebar(self):
@@ -35,6 +65,12 @@ class UIState(rx.State):
         """Switch between the weather and AI tabs on the Insights page."""
         if tab in ("weather", "ai"):
             self.insights_tab = tab
+
+    @rx.event
+    def set_dashboard_tab(self, tab: str):
+        """Switch the Dashboard between Overview / Analytics / Production."""
+        if tab in ("overview", "analytics", "production"):
+            self.dashboard_tab = tab
 
     @rx.event
     def toggle_mobile_nav(self):

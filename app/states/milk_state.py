@@ -62,6 +62,13 @@ class MilkState(rx.State):
 
     # ── UI state ────────────────────────────────────────────────────────
     pending_delete_id: str = ""
+    # Page tab: "overview" (stats + history) | "record" (scan + form + rates)
+    active_tab: str = "overview"
+
+    @rx.event
+    def set_active_tab(self, tab: str):
+        if tab in ("overview", "record"):
+            self.active_tab = tab
 
     # ── Field setters (defensive: strings → floats, never crash) ────────
 

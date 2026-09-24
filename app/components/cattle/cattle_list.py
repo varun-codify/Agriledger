@@ -1,7 +1,7 @@
-import reflex as rx
+﻿import reflex as rx
 
 from app.components.cattle.cattle_table import cattle_grid
-from app.components.common import segmented_control
+from app.components.common import BTN_PRIMARY, BTN_SECONDARY, INPUT_BASE, empty_state, segmented_control, spinner
 from app.states.cattle_state import CattleState
 
 
@@ -14,11 +14,11 @@ def summary_stat_card(
             class_name=f"p-3 rounded-full {color_class}",
         ),
         rx.el.div(
-            rx.el.p(value, class_name="text-2xl font-bold text-stone-800"),
-            rx.el.p(label, class_name="text-sm text-stone-500"),
+            rx.el.p(value, class_name="text-2xl font-bold text-stone-800 dark:text-stone-100"),
+            rx.el.p(label, class_name="text-sm text-stone-500 dark:text-stone-400"),
             class_name="ml-4",
         ),
-        class_name="flex items-center bg-white p-4 rounded-2xl shadow-sm border border-stone-100",
+        class_name="flex items-center bg-white dark:bg-stone-900 p-4 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-700 transition-shadow hover:shadow-md",
     )
 
 
@@ -35,7 +35,7 @@ def animal_type_badge(animal_type: rx.Var[str]) -> rx.Component:
     }
     return rx.el.span(
         animal_type.capitalize(),
-        class_name=f"text-xs px-2 py-1 rounded-full {rx.match(animal_type, *color_map.items(), 'bg-stone-100 text-stone-600')}",
+        class_name=f"text-xs px-2 py-1 rounded-full {rx.match(animal_type, *color_map.items(), 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300')}",
     )
 
 
@@ -60,7 +60,7 @@ def cattle_card(cattle: rx.Var[dict]) -> rx.Component:
                 rx.el.div(
                     rx.el.p(
                         cattle["name"],
-                        class_name="font-bold text-lg text-stone-800 truncate",
+                        class_name="font-bold text-lg text-stone-800 dark:text-stone-100 truncate",
                     ),
                     rx.cond(
                         cattle["is_juvenile"],
@@ -73,7 +73,7 @@ def cattle_card(cattle: rx.Var[dict]) -> rx.Component:
                     animal_type_badge(cattle["animal_type"]),
                     rx.el.span(
                         f"#{cattle['tag_number']}",
-                        class_name="text-xs font-mono px-2 py-1 bg-stone-100 text-stone-600 rounded-md",
+                        class_name="text-xs font-mono px-2 py-1 bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300 rounded-md",
                     ),
                     class_name="flex items-center justify-between mt-2",
                 ),
@@ -81,7 +81,7 @@ def cattle_card(cattle: rx.Var[dict]) -> rx.Component:
             ),
         ),
         href=f"/cattle/{cattle['id']}",
-        class_name="bg-white rounded-2xl shadow-sm border border-stone-100 hover:shadow-lg hover:-translate-y-1 transition-all",
+        class_name="bg-white dark:bg-stone-900 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-700 hover:shadow-lg hover:-translate-y-1 transition-all",
     )
 
 
@@ -91,11 +91,11 @@ def add_cattle_dialog() -> rx.Component:
         rx.el.div(
             rx.el.div(
                 on_click=lambda: CattleState.toggle_add_cattle_dialog(False),
-                class_name="fixed inset-0 bg-black/50 z-40",
+                class_name="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 al-fade-in",
             ),
             rx.el.div(
                 rx.el.h2(
-                    "Add New Animal", class_name="text-2xl font-bold text-stone-800"
+                    "Add New Animal", class_name="text-2xl font-bold text-stone-800 dark:text-stone-100"
                 ),
                 rx.cond(
                     CattleState.add_cattle_error != "",
@@ -110,16 +110,28 @@ def add_cattle_dialog() -> rx.Component:
                 ),
                 rx.el.form(
                     rx.el.div(
-                        rx.el.label("Name", class_name="text-sm font-medium"),
-                        rx.el.input(
-                            name="name", class_name="mt-1 w-full p-2 border rounded-md"
+                        rx.el.label(
+                            "Name",
+                            class_name="text-sm font-medium dark:text-stone-200",
                         ),
-                        rx.el.label("Tag Number", class_name="text-sm font-medium"),
+                        rx.el.input(
+                            name="name",
+                            class_name=f"mt-1 {INPUT_BASE}",
+                            min_height="40px",
+                        ),
+                        rx.el.label(
+                            "Tag Number",
+                            class_name="text-sm font-medium dark:text-stone-200",
+                        ),
                         rx.el.input(
                             name="tag_number",
-                            class_name="mt-1 w-full p-2 border rounded-md",
+                            class_name=f"mt-1 {INPUT_BASE}",
+                            min_height="40px",
                         ),
-                        rx.el.label("Animal Type", class_name="text-sm font-medium"),
+                        rx.el.label(
+                            "Animal Type",
+                            class_name="text-sm font-medium dark:text-stone-200",
+                        ),
                         rx.el.select(
                             rx.el.option("Cow", value="cow"),
                             rx.el.option("Bull", value="bull"),
@@ -130,40 +142,60 @@ def add_cattle_dialog() -> rx.Component:
                             rx.el.option("Cock", value="cock"),
                             rx.el.option("Chick", value="chick"),
                             name="animal_type",
-                            class_name="mt-1 w-full p-2 border rounded-md bg-white",
+                            class_name=f"mt-1 {INPUT_BASE}",
+                            min_height="40px",
                         ),
-                        rx.el.label("Breed", class_name="text-sm font-medium"),
+                        rx.el.label(
+                            "Breed",
+                            class_name="text-sm font-medium dark:text-stone-200",
+                        ),
                         rx.el.input(
-                            name="breed", class_name="mt-1 w-full p-2 border rounded-md"
+                            name="breed",
+                            class_name=f"mt-1 {INPUT_BASE}",
+                            min_height="40px",
                         ),
-                        rx.el.label("Age (years)", class_name="text-sm font-medium"),
+                        rx.el.label(
+                            "Age (years)",
+                            class_name="text-sm font-medium dark:text-stone-200",
+                        ),
                         rx.el.input(
                             name="age",
                             type="number",
-                            class_name="mt-1 w-full p-2 border rounded-md",
+                            class_name=f"mt-1 {INPUT_BASE}",
+                            min_height="40px",
                         ),
-                        rx.el.label("Weight (kg)", class_name="text-sm font-medium"),
+                        rx.el.label(
+                            "Weight (kg)",
+                            class_name="text-sm font-medium dark:text-stone-200",
+                        ),
                         rx.el.input(
                             name="weight",
                             type="number",
                             step="0.1",
-                            class_name="mt-1 w-full p-2 border rounded-md",
+                            class_name=f"mt-1 {INPUT_BASE}",
+                            min_height="40px",
                         ),
                         rx.el.label(
-                            "Purchase Price ($)", class_name="text-sm font-medium"
+                            "Purchase Price ($)",
+                            class_name="text-sm font-medium dark:text-stone-200",
                         ),
                         rx.el.input(
                             name="purchase_price",
                             type="number",
                             step="0.01",
-                            class_name="mt-1 w-full p-2 border rounded-md",
+                            class_name=f"mt-1 {INPUT_BASE}",
+                            min_height="40px",
                         ),
-                        rx.el.label("Purchase Date", class_name="text-sm font-medium"),
+                        rx.el.label(
+                            "Purchase Date",
+                            class_name="text-sm font-medium dark:text-stone-200",
+                        ),
                         rx.el.input(
                             name="purchase_date",
                             type="date",
                             default_value=CattleState.new_cattle_date,
-                            class_name="mt-1 w-full p-2 border rounded-md",
+                            class_name=f"mt-1 {INPUT_BASE}",
+                            min_height="40px",
                         ),
                         rx.el.div(
                             rx.el.label(
@@ -173,7 +205,7 @@ def add_cattle_dialog() -> rx.Component:
                                     name="is_juvenile",
                                     class_name="ml-2",
                                 ),
-                                class_name="flex items-center text-sm font-medium",
+                                class_name="flex items-center text-sm font-medium dark:text-stone-200",
                             ),
                             class_name="col-span-2",
                         ),
@@ -186,18 +218,23 @@ def add_cattle_dialog() -> rx.Component:
                             on_click=lambda: CattleState.toggle_add_cattle_dialog(
                                 False
                             ),
-                            class_name="w-full py-2 rounded-lg bg-stone-200 text-stone-800 font-semibold",
+                            class_name=f"w-full py-2 {BTN_SECONDARY}",
                         ),
                         rx.el.button(
-                            "Add Animal",
+                            rx.cond(
+                                CattleState.is_adding,
+                                spinner(),
+                                rx.el.span("Add Animal"),
+                            ),
                             type="submit",
-                            class_name="w-full py-2 rounded-lg bg-emerald-500 text-white font-semibold",
+                            disabled=CattleState.is_adding,
+                            class_name=f"w-full py-2 {BTN_PRIMARY} flex items-center justify-center",
                         ),
                         class_name="flex gap-4 mt-6",
                     ),
                     on_submit=CattleState.add_cattle,
                 ),
-                class_name="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl z-50 max-h-[90vh] overflow-y-auto",
+                class_name="al-modal-in bg-white dark:bg-stone-900 p-8 rounded-2xl shadow-xl w-full max-w-2xl z-50 max-h-[90vh] overflow-y-auto border border-stone-100 dark:border-stone-700",
             ),
             class_name="fixed inset-0 flex items-center justify-center p-4 z-50",
         ),
@@ -211,8 +248,8 @@ def animal_filter_button(label: str, filter_value: str) -> rx.Component:
         on_click=lambda: CattleState.set_animal_filter(filter_value),
         class_name=rx.cond(
             is_selected,
-            "px-4 py-1.5 rounded-lg text-sm font-semibold bg-emerald-500 text-white",
-            "px-4 py-1.5 rounded-lg text-sm font-semibold bg-white text-stone-600 border",
+            "px-4 py-1.5 rounded-lg text-sm font-semibold bg-emerald-500 text-white transition-all active:scale-95 shadow-sm",
+            "px-4 py-1.5 rounded-lg text-sm font-semibold bg-white text-stone-600 border transition-all hover:bg-stone-50 active:scale-95 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700",
         ),
     )
 
@@ -280,7 +317,7 @@ def cattle_management_page() -> rx.Component:
                     rx.icon("plus", class_name="h-4 w-4 mr-2"),
                     "Add New Animal",
                     on_click=lambda: CattleState.toggle_add_cattle_dialog(True),
-                    class_name="flex items-center bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-emerald-600 transition-all",
+                    class_name=f"flex items-center px-4 py-2 {BTN_PRIMARY}",
                 ),
                 class_name="flex items-center gap-3",
             ),
@@ -289,9 +326,17 @@ def cattle_management_page() -> rx.Component:
         rx.cond(
             CattleState.view_mode == "table",
             cattle_grid(row_data=CattleState.filtered_cattle),
-            rx.el.div(
-                rx.foreach(CattleState.filtered_cattle, cattle_card),
-                class_name="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6",
+            rx.cond(
+                CattleState.filtered_cattle.length() == 0,
+                empty_state(
+                    "git-fork",
+                    "No animals match this filter",
+                    "Try a different filter or add your first animal.",
+                ),
+                rx.el.div(
+                    rx.foreach(CattleState.filtered_cattle, cattle_card),
+                    class_name="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6",
+                ),
             ),
         ),
         add_cattle_dialog(),

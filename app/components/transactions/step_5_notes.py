@@ -1,4 +1,4 @@
-import reflex as rx
+﻿import reflex as rx
 
 from app.states.transaction_state import TransactionState
 
@@ -8,10 +8,10 @@ def step_5_notes() -> rx.Component:
     return rx.el.div(
         rx.el.h2(
             "Any additional notes?",
-            class_name="text-2xl font-bold text-stone-800 text-center mb-8",
+            class_name="text-2xl font-bold text-stone-800 text-center mb-8 dark:text-stone-100",
         ),
         rx.el.p(
-            "(Optional)", class_name="text-sm text-stone-500 text-center -mt-6 mb-8"
+            "(Optional)", class_name="text-sm text-stone-500 dark:text-stone-400 text-center -mt-6 mb-8"
         ),
         rx.el.textarea(
             placeholder="E.g., Bought from John's store, for cow #12...",

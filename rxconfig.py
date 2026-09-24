@@ -5,6 +5,7 @@ config = rx.Config(
     plugins=[
         rx.plugins.TailwindV3Plugin(
             config={
+                "darkMode": "class",
                 "theme": {
                     "extend": {
                         "colors": {
@@ -15,7 +16,12 @@ config = rx.Config(
                             }
                         }
                     }
-                }
+                },
+                "animation": {
+                    "modal-in": "al-modal-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) both",
+                    "fade-up": "al-fade-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) both",
+                    "shake": "al-shake 0.4s ease-in-out",
+                },
             }
         )
     ],

@@ -1,4 +1,4 @@
-import reflex as rx
+﻿import reflex as rx
 
 from app.states.cattle_state import CattleState
 from app.states.milk_state import DEFAULT_SOCIETIES
@@ -13,7 +13,7 @@ def milk_field(
     input_type: str = "text",
 ) -> rx.Component:
     return rx.el.div(
-        rx.el.label(label, class_name="block text-sm font-medium text-stone-700 mb-1"),
+        rx.el.label(label, class_name="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-200"),
         rx.el.input(
             type=input_type,
             placeholder=placeholder,
@@ -29,12 +29,12 @@ def step_8_milk() -> rx.Component:
     return rx.el.div(
         rx.el.h2(
             "Milk Sale Details",
-            class_name="text-2xl font-bold text-stone-800 text-center mb-8",
+            class_name="text-2xl font-bold text-stone-800 dark:text-stone-100 text-center mb-8 dark:text-stone-100",
         ),
         rx.el.div(
             rx.el.div(
                 rx.el.label(
-                    "Animal (optional)", class_name="block text-sm font-medium text-stone-700 mb-1"
+                    "Animal (optional)", class_name="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-200"
                 ),
                 rx.el.select(
                     rx.el.option("— Select animal —", value=""),
@@ -96,7 +96,7 @@ def step_8_milk() -> rx.Component:
                 rx.el.div(
                     rx.el.label(
                         "Milk Society",
-                        class_name="block text-sm font-medium text-stone-700 mb-1",
+                        class_name="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-200",
                     ),
                     rx.el.select(
                         rx.foreach(
@@ -119,7 +119,7 @@ def step_8_milk() -> rx.Component:
             rx.el.div(
                 rx.el.label(
                     "Payment Status",
-                    class_name="block text-sm font-medium text-stone-700 mb-1",
+                    class_name="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-200",
                 ),
                 rx.el.select(
                     rx.el.option("Pending (not paid yet)", value="pending"),
@@ -137,7 +137,7 @@ def step_8_milk() -> rx.Component:
                 input_type="date",
             ),
             rx.el.div(
-                rx.el.p("Total Price", class_name="text-sm text-stone-500"),
+                rx.el.p("Total Price", class_name="text-sm text-stone-500 dark:text-stone-400"),
                 rx.el.p(
                     "₹" + TransactionState.milk_total_price.to_string(),
                     class_name="text-3xl font-bold text-emerald-600",

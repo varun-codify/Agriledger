@@ -8,18 +8,17 @@ from typing import TypedDict
 import httpx
 import reflex as rx
 
-_WEATHER_CACHE: dict | None = None
-_WEATHER_CACHE_TIME: float = 0.0
-
-
 from app.database import crud
-from app.states.auth_state import AuthState
 from app.database.models import (
     ActivityType,
     Crop,
     CropActivity,
     HarvestRecord,
 )
+from app.states.auth_state import AuthState
+
+_WEATHER_CACHE: dict | None = None
+_WEATHER_CACHE_TIME: float = 0.0
 
 
 class CurrentWeather(TypedDict):
@@ -224,6 +223,8 @@ class CropState(rx.State):
     dialog_error: str = ""
     weather_data: WeatherData | None = None
     weather_loading: bool = True
+    # List filter: "all" | "Growing" | "Planted" | "Harvested" | "Fallow"
+    status_filter: str = "all"
     activity_types: list[ActivityType] = [
         "Planting",
         "Fertilizing",
@@ -233,6 +234,20 @@ class CropState(rx.State):
         "Harvesting",
         "Expense",
     ]
+
+    @rx.event
+    def set_status_filter(self, value: str):
+        self.status_filter = value
+
+    @rx.var
+    def filtered_crops(self) -> list[Crop]:
+        if self.status_filter == "all":
+            return self.crops_list
+        return [c for c in self.crops_list if c.get("status") == self.status_filter]
+
+    @rx.var
+    def growing_count(self) -> int:
+        return sum(1 for c in self.crops_list if c.get("status") == "Growing")
 
     @rx.event
     def load_crop_profile(self):
@@ -311,18 +326,17 @@ class CropState(rx.State):
             return rx.toast.success(f"'{new_crop['name']}' has been added.")
         self.add_crop_error = "Failed to save crop. Please try again."
 
-    @rx.event(background=True)
+    @rx.event
     async def fetch_weather(self):
+        """Load weather for the dashboard/insights (regular event so loaders can await it)."""
         global _WEATHER_CACHE, _WEATHER_CACHE_TIME
         now = time.time()
         if _WEATHER_CACHE is not None and (now - _WEATHER_CACHE_TIME < 900):
-            async with self:
-                self.weather_data = _WEATHER_CACHE
-                self.weather_loading = False
+            self.weather_data = _WEATHER_CACHE
+            self.weather_loading = False
             return
 
-        async with self:
-            self.weather_loading = True
+        self.weather_loading = True
         try:
             lat, lon = (28.6139, 77.209)
             params = {
@@ -341,13 +355,11 @@ class CropState(rx.State):
                 cleaned = _clean_weather_data(data)
                 _WEATHER_CACHE = cleaned
                 _WEATHER_CACHE_TIME = now
-                async with self:
-                    self.weather_data = cleaned
-                    self.weather_loading = False
+                self.weather_data = cleaned
+                self.weather_loading = False
         except Exception as e:
             logging.exception(f"Failed to fetch weather data: {e}")
-            async with self:
-                self.weather_loading = False
+            self.weather_loading = False
 
 
     def _get_weather_info(self, code: int) -> tuple[str, str]:
@@ -573,7 +585,7 @@ class CropState(rx.State):
             expense_map[activity["activity_type"]] += activity["cost"]
         colors = {
             "Planting": "#10b981",
-            "Fertilizing": "#3b82f6",
+            "Fertilizing": "#06b6d4",
             "Pesticide Application": "#f97316",
             "Irrigation": "#06b6d4",
             "Weeding": "#f59e0b",

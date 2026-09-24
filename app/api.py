@@ -731,8 +731,6 @@ async def ai_chat(
 async def ai_health_score(current_user: dict = Depends(get_current_user)):
     farm_id = current_user.get("farm_id") or current_user.get("email")
     cattle = await crud.get_all_cattle(farm_id)
-    crops = await crud.get_all_crops(farm_id)
-    transactions = await crud.get_all_transactions(farm_id)
 
     healthy_animals = sum(1 for c in cattle if c.get("health_status") == "Healthy")
     score = 85 if not cattle else int((healthy_animals / len(cattle)) * 100)
@@ -805,6 +803,8 @@ async def list_family(current_user: dict = Depends(get_current_user)):
 async def add_family(
     data: FamilyMemberCreate, current_user: dict = Depends(get_current_user)
 ):
+    from datetime import datetime as _datetime
+
     farm_id = current_user.get("farm_id") or current_user.get("email")
     _validate_email(data.email)
     member_doc = {
@@ -815,7 +815,7 @@ async def add_family(
         "phone": data.phone,
         "role": data.role,
         "status": "invited",
-        "added_date": datetime.now().strftime("%Y-%m-%d"),
+        "added_date": _datetime.now().strftime("%Y-%m-%d"),
     }
     success = await crud.create_family_member(member_doc)
     if not success:

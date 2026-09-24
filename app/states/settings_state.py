@@ -19,6 +19,14 @@ class SettingsState(rx.State):
     farm_size: str = "50 Acres"
     settings_error: str = ""
     is_exporting: bool = False
+    # Active settings section tab (progressive disclosure of long form).
+    active_tab: str = "account"  # "account" | "preferences" | "people" | "data"
+
+    @rx.event
+    def set_active_tab(self, tab: str):
+        if tab in ("account", "preferences", "people", "data"):
+            self.active_tab = tab
+            self.settings_error = ""
 
     @rx.event
     async def fetch_farm_settings(self):

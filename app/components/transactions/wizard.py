@@ -1,5 +1,6 @@
-import reflex as rx
+﻿import reflex as rx
 
+from app.components.common import BTN_PRIMARY, BTN_SECONDARY
 from app.states.transaction_state import TransactionState
 
 from .step_1_type import step_1_type
@@ -13,11 +14,12 @@ from .step_8_milk import step_8_milk
 
 
 def wizard_progress() -> rx.Component:
+    """Clickable step indicators — jump back to any completed step."""
     return rx.el.div(
         rx.foreach(
             TransactionState.wizard_steps,
             lambda step, index: rx.el.div(
-                rx.el.div(
+                rx.el.button(
                     rx.el.div(
                         rx.cond(
                             TransactionState.current_step > index + 1,
@@ -26,28 +28,34 @@ def wizard_progress() -> rx.Component:
                         ),
                         class_name=rx.cond(
                             TransactionState.current_step > index,
-                            "flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500 text-white",
-                            "flex items-center justify-center w-6 h-6 rounded-full bg-stone-200 text-stone-600",
+                            "flex items-center justify-center w-7 h-7 rounded-full bg-emerald-500 text-white transition-all duration-300 scale-100 shadow-sm",
+                            "flex items-center justify-center w-7 h-7 rounded-full bg-stone-200 text-stone-600 dark:bg-stone-700 dark:text-stone-300 transition-all duration-300 dark:bg-stone-700 dark:text-stone-300",
                         ),
                     ),
                     rx.el.p(
                         step,
                         class_name=rx.cond(
                             TransactionState.current_step > index,
-                            "text-xs font-semibold text-emerald-600 mt-1 hidden sm:block",
-                            "text-xs font-medium text-stone-500 mt-1 hidden sm:block",
+                            "text-xs font-semibold text-emerald-600 mt-1 hidden sm:block transition-colors",
+                            "text-xs font-medium text-stone-500 dark:text-stone-400 mt-1 hidden sm:block transition-colors dark:text-stone-400",
                         ),
                     ),
-                    class_name="flex flex-col items-center",
+                    on_click=TransactionState.go_to_step(index + 1),
+                    disabled=TransactionState.current_step <= index + 1,
+                    aria_label=f"Go to step {index + 1}: {step}",
+                    class_name="flex flex-col items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 rounded-lg disabled:cursor-default min-w-[40px] min-h-[40px] pt-1",
                 ),
                 rx.cond(
                     index < TransactionState.wizard_steps.length() - 1,
                     rx.el.div(
-                        class_name=rx.cond(
-                            TransactionState.current_step > index + 1,
-                            "flex-1 h-0.5 bg-emerald-500",
-                            "flex-1 h-0.5 bg-stone-200",
-                        )
+                        rx.el.div(
+                            class_name=rx.cond(
+                                TransactionState.current_step > index + 1,
+                                "al-grow-x h-0.5 w-full bg-emerald-500 origin-left",
+                                "h-0.5 w-full bg-stone-200 dark:bg-stone-700",
+                            )
+                        ),
+                        class_name="flex-1 h-0.5 overflow-hidden",
                     ),
                     None,
                 ),
@@ -63,20 +71,30 @@ def wizard_nav() -> rx.Component:
         rx.el.button(
             "Back",
             on_click=TransactionState.prev_step,
-            class_name="bg-stone-200 text-stone-700 px-6 py-2 rounded-lg font-semibold hover:bg-stone-300 transition",
+            class_name=f"px-6 py-2.5 min-h-[40px] {BTN_SECONDARY}",
             disabled=TransactionState.current_step == 1,
         ),
         rx.cond(
             TransactionState.current_step >= 6,
             rx.el.button(
-                "Submit Transaction",
+                rx.cond(
+                    TransactionState.is_submitting,
+                    rx.icon("loader-circle", class_name="h-4 w-4 animate-spin mr-2"),
+                    None,
+                ),
+                rx.cond(
+                    TransactionState.is_submitting,
+                    "Submitting…",
+                    "Submit Transaction",
+                ),
                 on_click=TransactionState.submit_transaction,
-                class_name="bg-emerald-500 text-white px-6 py-2 rounded-lg font-semibold hover:bg-emerald-600 transition",
+                disabled=TransactionState.is_submitting,
+                class_name=f"px-6 py-2.5 min-h-[40px] {BTN_PRIMARY} inline-flex items-center",
             ),
             rx.el.button(
                 "Next",
                 on_click=TransactionState.next_step,
-                class_name="bg-emerald-500 text-white px-6 py-2 rounded-lg font-semibold hover:bg-emerald-600 transition",
+                class_name=f"px-6 py-2.5 min-h-[40px] {BTN_PRIMARY}",
                 disabled=rx.cond(
                     (TransactionState.current_step == 1)
                     & (TransactionState.transaction_type == None),  # noqa: E711 — rx.cond compiles to JS equality
@@ -95,7 +113,7 @@ def wizard_nav() -> rx.Component:
                 ),
             ),
         ),
-        class_name="flex justify-between w-full max-w-2xl mx-auto mt-8 pt-4 border-t border-stone-200",
+        class_name="flex justify-between w-full max-w-2xl mx-auto mt-8 pt-4 border-t border-stone-200 dark:border-stone-700",
     )
 
 
@@ -116,7 +134,7 @@ def transaction_wizard() -> rx.Component:
                 (8, step_8_milk()),
                 rx.el.div("Invalid Step"),
             ),
-            class_name="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-stone-100 w-full max-w-2xl mx-auto min-h-[400px]",
+            class_name="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-stone-100 w-full max-w-2xl mx-auto min-h-[400px] dark:bg-stone-900 dark:border-stone-700",
         ),
         wizard_nav(),
         on_mount=TransactionState.reset_wizard,

@@ -1,4 +1,4 @@
-import reflex as rx
+﻿import reflex as rx
 
 from app.states.transaction_state import TransactionState
 
@@ -11,7 +11,7 @@ def coconut_field(
     input_type: str = "text",
 ) -> rx.Component:
     return rx.el.div(
-        rx.el.label(label, class_name="block text-sm font-medium text-stone-700 mb-1"),
+        rx.el.label(label, class_name="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-200"),
         rx.el.input(
             type=input_type,
             placeholder=placeholder,
@@ -27,7 +27,7 @@ def step_7_coconut() -> rx.Component:
     return rx.el.div(
         rx.el.h2(
             "Coconut Sale Details",
-            class_name="text-2xl font-bold text-stone-800 text-center mb-8",
+            class_name="text-2xl font-bold text-stone-800 dark:text-stone-100 text-center mb-8 dark:text-stone-100",
         ),
         rx.el.div(
             coconut_field(
@@ -58,7 +58,7 @@ def step_7_coconut() -> rx.Component:
                 input_type="date",
             ),
             rx.el.div(
-                rx.el.p("Total Amount", class_name="text-sm text-stone-500"),
+                rx.el.p("Total Amount", class_name="text-sm text-stone-500 dark:text-stone-400"),
                 rx.el.p(
                     "₹" + TransactionState.coconut_total_amount.to_string(),
                     class_name="text-3xl font-bold text-emerald-600",

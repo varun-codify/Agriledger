@@ -1,8 +1,15 @@
 """MongoDB async connection (Motor).
 
 Both the Reflex app layer and the FastAPI API share this single client.
+
+Motor binds operations to the event loop that was active when the client was
+first used. Reflex hot-reloads and restarts create a new loop while the old
+client object can survive in module state — every subsequent query then fails
+with "Event loop is closed". We therefore track the owning loop and rebuild
+the client whenever the loop changes or has been closed.
 """
 
+import asyncio
 import logging
 
 try:
@@ -23,13 +30,57 @@ from app.config import config
 logger = logging.getLogger(__name__)
 
 _client: AsyncIOMotorClient | None = None
+_client_loop: asyncio.AbstractEventLoop | None = None
 _indexes_ensured = False
 
 
+def _current_loop() -> asyncio.AbstractEventLoop | None:
+    """Return the running loop, or None outside of async context."""
+    try:
+        return asyncio.get_running_loop()
+    except RuntimeError:
+        return None
+
+
+def _close_client_quietly(client: AsyncIOMotorClient | None) -> None:
+    if client is None:
+        return
+    try:
+        client.close()
+    except Exception:
+        pass
+
+
+def reset_db_client() -> None:
+    """Drop the shared client so the next call rebuilds it on the current loop."""
+    global _client, _client_loop, _indexes_ensured
+    _close_client_quietly(_client)
+    _client = None
+    _client_loop = None
+    # Allow indexes to be ensured again after a reconnect.
+    _indexes_ensured = False
+
 
 def get_db_client() -> AsyncIOMotorClient | None:
-    """Get or create the shared async MongoDB client with production connection pooling."""
-    global _client
+    """Get or create the shared async MongoDB client for the *current* event loop."""
+    global _client, _client_loop
+
+    loop = _current_loop()
+
+    if _client is not None:
+        # Rebuild when the owning loop is gone/changed (hot-reload, restart).
+        stale = False
+        if _client_loop is not None and _client_loop.is_closed():
+            stale = True
+        elif loop is not None and _client_loop is not None and _client_loop is not loop:
+            stale = True
+        elif loop is not None and _client_loop is None:
+            # Client was created outside async context; rebind to running loop.
+            stale = True
+        if stale:
+            logger.info("MongoDB client event loop changed; rebuilding client.")
+            reset_db_client()
+
     if _client is None:
         try:
             _client = AsyncIOMotorClient(
@@ -41,20 +92,42 @@ def get_db_client() -> AsyncIOMotorClient | None:
                 connectTimeoutMS=5000,
                 socketTimeoutMS=10000,
             )
+            _client_loop = loop
             logging.info("Created async MongoDB client with connection pooling.")
-            # Trigger index creation automatically in background
-            try:
-                import asyncio
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
+            if loop is not None and loop.is_running():
+                try:
                     loop.create_task(ensure_indexes_once())
-            except Exception:
-                pass
+                except Exception:
+                    pass
         except Exception as e:
             logging.exception(f"Failed to create MongoDB client: {e}")
             _client = None
+            _client_loop = None
     return _client
 
+
+def is_stale_loop_error(exc: BaseException) -> bool:
+    """True for errors caused by a Motor client bound to a closed/replaced loop."""
+    msg = str(exc)
+    return isinstance(exc, RuntimeError) and (
+        "Event loop is closed" in msg
+        or "Event loop is closed." in msg
+        or "attached to a different loop" in msg
+        or "is closed" in msg and "loop" in msg.lower()
+    )
+
+
+async def with_loop_retry(fn):
+    """Run ``fn`` (a zero-arg coroutine factory), rebuilding the DB client once
+    if the failure is a stale-event-loop error."""
+    try:
+        return await fn()
+    except Exception as e:
+        if is_stale_loop_error(e):
+            logger.warning(f"Stale MongoDB event loop detected ({e}); resetting client and retrying.")
+            reset_db_client()
+            return await fn()
+        raise
 
 
 def get_db() -> AsyncIOMotorDatabase:
@@ -94,7 +167,7 @@ async def ping_db() -> bool:
         if client is None:
             return False
         db = client[config.mongodb.database_name]
-        await db.command("ping")
+        await with_loop_retry(lambda: db.command("ping"))
         return True
     except Exception as e:
         logger.warning(f"Database ping failed: {e}")

@@ -1,4 +1,4 @@
-import reflex as rx
+﻿import reflex as rx
 
 from app.components.cattle.cattle_profitability import cattle_profitability_section
 from app.components.layout import dashboard_layout
@@ -28,20 +28,20 @@ def health_status_badge(status: rx.Var[str]) -> rx.Component:
                 "Under Treatment",
                 "px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800",
             ),
-            "px-3 py-1 text-xs font-semibold rounded-full bg-stone-100 text-stone-600",
+            "px-3 py-1 text-xs font-semibold rounded-full bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300",
         ),
     )
 
 
 def metric_card(icon: str, label: str, value: rx.Var) -> rx.Component:
     return rx.el.div(
-        rx.icon(icon, class_name="h-6 w-6 text-stone-500"),
+        rx.icon(icon, class_name="h-6 w-6 text-stone-500 dark:text-stone-400"),
         rx.el.div(
-            rx.el.p(label, class_name="text-sm text-stone-500"),
-            rx.el.p(value, class_name="text-lg font-bold text-stone-800"),
+            rx.el.p(label, class_name="text-sm text-stone-500 dark:text-stone-400"),
+            rx.el.p(value, class_name="text-lg font-bold text-stone-800 dark:text-stone-100"),
             class_name="ml-3",
         ),
-        class_name="flex items-center bg-white p-4 rounded-xl shadow-sm border border-stone-100",
+        class_name="flex items-center bg-white p-4 rounded-xl shadow-sm border border-stone-100 dark:bg-stone-900 dark:border-stone-700",
     )
 
 
@@ -52,7 +52,7 @@ def profile_action_button(
         rx.icon(icon, class_name="h-4 w-4 mr-2"),
         label,
         on_click=on_click,
-        class_name="flex items-center bg-white text-stone-700 px-4 py-2 rounded-lg font-semibold border border-stone-200 hover:bg-stone-50 transition-all text-sm",
+        class_name="flex items-center min-h-[40px] bg-white text-stone-700 px-4 py-2 rounded-lg font-semibold border border-stone-200 hover:bg-stone-50 transition-all text-sm dark:bg-stone-800 dark:text-stone-200 dark:border-stone-600 dark:hover:bg-stone-700",
     )
 
 
@@ -67,7 +67,7 @@ def profile_tabs() -> rx.Component:
                 class_name=rx.cond(
                     CattleState.profile_active_tab == tab,
                     "px-4 py-2 font-semibold text-emerald-600 border-b-2 border-emerald-500",
-                    "px-4 py-2 font-medium text-stone-500 hover:text-stone-800",
+                    "px-4 py-2 font-medium text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200",
                 ),
             ),
         ),
@@ -79,7 +79,7 @@ def milk_production_chart() -> rx.Component:
     return rx.el.div(
         rx.el.h3(
             "Milk Production (Last 30 Days)",
-            class_name="text-lg font-semibold text-stone-800 mb-4",
+            class_name="text-lg font-semibold text-stone-800 mb-4 dark:text-stone-100",
         ),
         rx.recharts.line_chart(
             rx.recharts.cartesian_grid(
@@ -90,12 +90,12 @@ def milk_production_chart() -> rx.Component:
                 data_key="date",
                 tick_line=False,
                 axis_line=False,
-                class_name="text-xs text-stone-500",
+                class_name="text-xs text-stone-500 dark:text-stone-400",
             ),
             rx.recharts.y_axis(
                 tick_line=False,
                 axis_line=False,
-                class_name="text-xs text-stone-500",
+                class_name="text-xs text-stone-500 dark:text-stone-400",
                 domain=["dataMin - 1", "dataMax + 1"],
             ),
             rx.recharts.line(
@@ -109,7 +109,7 @@ def milk_production_chart() -> rx.Component:
             height=300,
             class_name="w-full",
         ),
-        class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 col-span-2",
+        class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 col-span-2 dark:bg-stone-900 dark:border-stone-700",
     )
 
 
@@ -122,9 +122,9 @@ def timeline_item(
             class_name=f"absolute -left-4 top-0.5 flex items-center justify-center w-8 h-8 rounded-full {color_class}",
         ),
         rx.el.div(
-            rx.el.time(date, class_name="text-xs font-medium text-stone-500"),
-            rx.el.h3(title, class_name="font-semibold text-stone-800"),
-            rx.el.p(description, class_name="text-sm text-stone-600"),
+            rx.el.time(date, class_name="text-xs font-medium text-stone-500 dark:text-stone-400"),
+            rx.el.h3(title, class_name="font-semibold text-stone-800 dark:text-stone-100"),
+            rx.el.p(description, class_name="text-sm text-stone-600 dark:text-stone-300"),
             class_name="ml-8",
         ),
         class_name="relative pl-4 border-l-2 border-stone-200",
@@ -135,7 +135,7 @@ def health_timeline() -> rx.Component:
     return rx.el.div(
         rx.el.h3(
             "Health & Vaccination Timeline",
-            class_name="text-lg font-semibold text-stone-800 mb-4",
+            class_name="text-lg font-semibold text-stone-800 mb-4 dark:text-stone-100",
         ),
         rx.el.div(
             rx.foreach(
@@ -166,7 +166,7 @@ def health_timeline() -> rx.Component:
             ),
             class_name="space-y-6",
         ),
-        class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100",
+        class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 dark:bg-stone-900 dark:border-stone-700",
     )
 
 
@@ -232,7 +232,7 @@ def milk_history_tab_content() -> rx.Component:
                 ),
                 class_name="w-full text-sm",
             ),
-            class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100",
+            class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 dark:bg-stone-900 dark:border-stone-700",
         )
     )
 
@@ -255,37 +255,37 @@ def add_milk_dialog() -> rx.Component:
         rx.el.div(
             rx.el.div(
                 on_click=lambda: CattleState.toggle_milk_dialog(False),
-                class_name="fixed inset-0 bg-black/50 z-40",
+                class_name="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 al-fade-in",
             ),
             rx.el.div(
                 rx.el.h2(
-                    "Add Milk Entry", class_name="text-xl font-bold text-stone-800"
+                    "Add Milk Entry", class_name="text-xl font-bold text-stone-800 dark:text-stone-100"
                 ),
                 _dialog_error_banner(CattleState.dialog_error),
                 rx.el.form(
                     rx.el.div(
-                        rx.el.label("Date", class_name="text-sm font-medium"),
+                        rx.el.label("Date", class_name="text-sm font-medium dark:text-stone-200"),
                         rx.el.input(
                             name="date",
                             type="date",
                             default_value=CattleState.current_dialog_date,
-                            class_name="mt-1 w-full p-2 border rounded-md",
+                            class_name="mt-1 w-full p-2 border rounded-md dark:bg-stone-800 dark:border-stone-600 dark:text-stone-100 min-h-[40px]",
                         ),
-                        rx.el.label("Liters", class_name="text-sm font-medium"),
+                        rx.el.label("Liters", class_name="text-sm font-medium dark:text-stone-200"),
                         rx.el.input(
                             name="liters",
                             type="number",
                             step="0.1",
                             placeholder="e.g., 12.5",
-                            class_name="mt-1 w-full p-2 border rounded-md",
+                            class_name="mt-1 w-full p-2 border rounded-md dark:bg-stone-800 dark:border-stone-600 dark:text-stone-100 min-h-[40px]",
                         ),
                         rx.el.label(
-                            "Notes (Optional)", class_name="text-sm font-medium"
+                            "Notes (Optional)", class_name="text-sm font-medium dark:text-stone-200"
                         ),
                         rx.el.textarea(
                             name="notes",
                             placeholder="Any observations...",
-                            class_name="mt-1 w-full p-2 border rounded-md",
+                            class_name="mt-1 w-full p-2 border rounded-md dark:bg-stone-800 dark:border-stone-600 dark:text-stone-100 min-h-[40px]",
                         ),
                         class_name="space-y-4 my-6",
                     ),
@@ -293,7 +293,7 @@ def add_milk_dialog() -> rx.Component:
                         rx.el.button(
                             "Cancel",
                             on_click=lambda: CattleState.toggle_milk_dialog(False),
-                            class_name="px-4 py-2 bg-stone-200 rounded-md font-semibold",
+                            class_name="px-4 py-2 bg-stone-200 rounded-md font-semibold transition-all hover:bg-stone-300 active:scale-[0.98] dark:bg-stone-700 dark:text-stone-100 dark:hover:bg-stone-600",
                         ),
                         rx.el.button(
                             "Save Entry",
@@ -304,7 +304,7 @@ def add_milk_dialog() -> rx.Component:
                     ),
                     on_submit=CattleState.add_milk_entry,
                 ),
-                class_name="bg-white p-8 rounded-2xl shadow-xl w-full max-w-lg z-50 max-h-[90vh] overflow-y-auto",
+                class_name="al-modal-in bg-white dark:bg-stone-900 p-8 rounded-2xl shadow-xl w-full max-w-lg z-50 max-h-[90vh] overflow-y-auto border border-stone-100 dark:border-stone-700",
             ),
             class_name="fixed inset-0 flex items-center justify-center p-4 z-50",
         ),
@@ -317,49 +317,49 @@ def add_vaccination_dialog() -> rx.Component:
         rx.el.div(
             rx.el.div(
                 on_click=lambda: CattleState.toggle_vaccination_dialog(False),
-                class_name="fixed inset-0 bg-black/50 z-40",
+                class_name="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 al-fade-in",
             ),
             rx.el.div(
                 rx.el.h2(
-                    "Record Vaccination", class_name="text-xl font-bold text-stone-800"
+                    "Record Vaccination", class_name="text-xl font-bold text-stone-800 dark:text-stone-100"
                 ),
                 _dialog_error_banner(CattleState.dialog_error),
                 rx.el.form(
                     rx.el.div(
-                        rx.el.label("Vaccine Name", class_name="text-sm font-medium"),
+                        rx.el.label("Vaccine Name", class_name="text-sm font-medium dark:text-stone-200"),
                         rx.el.input(
                             name="vaccine_name",
                             placeholder="e.g., FMD Vaccine",
-                            class_name="mt-1 w-full p-2 border rounded-md",
+                            class_name="mt-1 w-full p-2 border rounded-md dark:bg-stone-800 dark:border-stone-600 dark:text-stone-100 min-h-[40px]",
                         ),
                         rx.el.label(
-                            "Date Administered", class_name="text-sm font-medium"
+                            "Date Administered", class_name="text-sm font-medium dark:text-stone-200"
                         ),
                         rx.el.input(
                             name="date",
                             type="date",
                             default_value=CattleState.current_dialog_date,
-                            class_name="mt-1 w-full p-2 border rounded-md",
+                            class_name="mt-1 w-full p-2 border rounded-md dark:bg-stone-800 dark:border-stone-600 dark:text-stone-100 min-h-[40px]",
                         ),
-                        rx.el.label("Veterinarian", class_name="text-sm font-medium"),
+                        rx.el.label("Veterinarian", class_name="text-sm font-medium dark:text-stone-200"),
                         rx.el.input(
                             name="veterinarian",
                             placeholder="e.g., Dr. Smith",
-                            class_name="mt-1 w-full p-2 border rounded-md",
+                            class_name="mt-1 w-full p-2 border rounded-md dark:bg-stone-800 dark:border-stone-600 dark:text-stone-100 min-h-[40px]",
                         ),
                         rx.el.label(
-                            "Next Due Date (Optional)", class_name="text-sm font-medium"
+                            "Next Due Date (Optional)", class_name="text-sm font-medium dark:text-stone-200"
                         ),
                         rx.el.input(
                             name="next_due_date",
                             type="date",
-                            class_name="mt-1 w-full p-2 border rounded-md",
+                            class_name="mt-1 w-full p-2 border rounded-md dark:bg-stone-800 dark:border-stone-600 dark:text-stone-100 min-h-[40px]",
                         ),
                         rx.el.label(
-                            "Notes (Optional)", class_name="text-sm font-medium"
+                            "Notes (Optional)", class_name="text-sm font-medium dark:text-stone-200"
                         ),
                         rx.el.textarea(
-                            name="notes", class_name="mt-1 w-full p-2 border rounded-md"
+                            name="notes", class_name="mt-1 w-full p-2 border rounded-md dark:bg-stone-800 dark:border-stone-600 dark:text-stone-100 min-h-[40px]"
                         ),
                         class_name="grid grid-cols-1 sm:grid-cols-2 gap-4 my-6",
                     ),
@@ -369,7 +369,7 @@ def add_vaccination_dialog() -> rx.Component:
                             on_click=lambda: CattleState.toggle_vaccination_dialog(
                                 False
                             ),
-                            class_name="px-4 py-2 bg-stone-200 rounded-md font-semibold",
+                            class_name="px-4 py-2 bg-stone-200 rounded-md font-semibold transition-all hover:bg-stone-300 active:scale-[0.98] dark:bg-stone-700 dark:text-stone-100 dark:hover:bg-stone-600",
                         ),
                         rx.el.button(
                             "Save Record",
@@ -380,7 +380,7 @@ def add_vaccination_dialog() -> rx.Component:
                     ),
                     on_submit=CattleState.add_vaccination_record,
                 ),
-                class_name="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl z-50 max-h-[90vh] overflow-y-auto",
+                class_name="al-modal-in bg-white dark:bg-stone-900 p-8 rounded-2xl shadow-xl w-full max-w-2xl z-50 max-h-[90vh] overflow-y-auto border border-stone-100 dark:border-stone-700",
             ),
             class_name="fixed inset-0 flex items-center justify-center p-4 z-50",
         ),
@@ -393,37 +393,37 @@ def add_health_note_dialog() -> rx.Component:
         rx.el.div(
             rx.el.div(
                 on_click=lambda: CattleState.toggle_health_note_dialog(False),
-                class_name="fixed inset-0 bg-black/50 z-40",
+                class_name="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 al-fade-in",
             ),
             rx.el.div(
                 rx.el.h2(
-                    "Add Health Note", class_name="text-xl font-bold text-stone-800"
+                    "Add Health Note", class_name="text-xl font-bold text-stone-800 dark:text-stone-100"
                 ),
                 _dialog_error_banner(CattleState.dialog_error),
                 rx.el.form(
                     rx.el.div(
-                        rx.el.label("Date", class_name="text-sm font-medium"),
+                        rx.el.label("Date", class_name="text-sm font-medium dark:text-stone-200"),
                         rx.el.input(
                             name="date",
                             type="date",
                             default_value=CattleState.current_dialog_date,
-                            class_name="mt-1 w-full p-2 border rounded-md",
+                            class_name="mt-1 w-full p-2 border rounded-md dark:bg-stone-800 dark:border-stone-600 dark:text-stone-100 min-h-[40px]",
                         ),
-                        rx.el.label("Severity", class_name="text-sm font-medium"),
+                        rx.el.label("Severity", class_name="text-sm font-medium dark:text-stone-200"),
                         rx.el.select(
                             rx.el.option("Normal", value="Normal"),
                             rx.el.option("Attention Needed", value="Attention Needed"),
                             rx.el.option("Critical", value="Critical"),
                             name="severity",
-                            class_name="mt-1 w-full p-2 border rounded-md",
+                            class_name="mt-1 w-full p-2 border rounded-md dark:bg-stone-800 dark:border-stone-600 dark:text-stone-100 min-h-[40px]",
                         ),
                         rx.el.label(
-                            "Note", class_name="text-sm font-medium col-span-2"
+                            "Note", class_name="text-sm font-medium col-span-2 dark:text-stone-200"
                         ),
                         rx.el.textarea(
                             name="note",
                             placeholder="Observations about health or behavior...",
-                            class_name="mt-1 w-full p-2 border rounded-md col-span-2 h-24",
+                            class_name="mt-1 w-full p-2 border rounded-md col-span-2 h-24 dark:bg-stone-800 dark:border-stone-600 dark:text-stone-100",
                         ),
                         class_name="grid grid-cols-1 sm:grid-cols-2 gap-4 my-6",
                     ),
@@ -433,7 +433,7 @@ def add_health_note_dialog() -> rx.Component:
                             on_click=lambda: CattleState.toggle_health_note_dialog(
                                 False
                             ),
-                            class_name="px-4 py-2 bg-stone-200 rounded-md font-semibold",
+                            class_name="px-4 py-2 bg-stone-200 rounded-md font-semibold transition-all hover:bg-stone-300 active:scale-[0.98] dark:bg-stone-700 dark:text-stone-100 dark:hover:bg-stone-600",
                         ),
                         rx.el.button(
                             "Save Note",
@@ -444,7 +444,7 @@ def add_health_note_dialog() -> rx.Component:
                     ),
                     on_submit=CattleState.add_health_note,
                 ),
-                class_name="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl z-50 max-h-[90vh] overflow-y-auto",
+                class_name="al-modal-in bg-white dark:bg-stone-900 p-8 rounded-2xl shadow-xl w-full max-w-2xl z-50 max-h-[90vh] overflow-y-auto border border-stone-100 dark:border-stone-700",
             ),
             class_name="fixed inset-0 flex items-center justify-center p-4 z-50",
         ),
@@ -463,11 +463,11 @@ def cattle_profile_content() -> rx.Component:
                     rx.el.div(
                         rx.el.h2(
                             CattleState.current_cattle["name"],
-                            class_name="text-3xl font-bold text-stone-800",
+                            class_name="text-3xl font-bold text-stone-800 dark:text-stone-100",
                         ),
                         rx.el.span(
                             f"#{CattleState.current_cattle['tag_number']}",
-                            class_name="text-sm font-mono px-2 py-1 bg-stone-100 text-stone-600 rounded-md",
+                            class_name="text-sm font-mono px-2 py-1 bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300 rounded-md",
                         ),
                         health_status_badge(
                             CattleState.current_cattle["health_status"]
@@ -476,7 +476,7 @@ def cattle_profile_content() -> rx.Component:
                     ),
                     rx.el.p(
                         f"{CattleState.current_cattle['breed']} {CattleState.current_cattle['animal_type']}",
-                        class_name="text-stone-600",
+                        class_name="text-stone-600 dark:text-stone-300",
                     ),
                     class_name="mt-4",
                 ),
@@ -546,11 +546,11 @@ def cattle_profile_page() -> rx.Component:
                 rx.el.div(
                     rx.el.h2(
                         "Cattle not found",
-                        class_name="text-2xl font-bold text-stone-800",
+                        class_name="text-2xl font-bold text-stone-800 dark:text-stone-100",
                     ),
                     rx.el.p(
                         "Could not find cattle data for the given ID.",
-                        class_name="text-stone-600",
+                        class_name="text-stone-600 dark:text-stone-300",
                     ),
                     class_name="text-center py-20",
                 ),

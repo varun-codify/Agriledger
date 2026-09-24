@@ -1,4 +1,4 @@
-import reflex as rx
+﻿import reflex as rx
 
 from app.states.transaction_state import TransactionState
 
@@ -7,7 +7,7 @@ def keypad_button(key: str) -> rx.Component:
     return rx.el.button(
         key,
         on_click=lambda: TransactionState.handle_keypad(key),
-        class_name="p-4 rounded-lg bg-stone-100 text-stone-800 font-bold text-2xl hover:bg-stone-200 transition",
+        class_name="p-4 rounded-lg bg-stone-100 text-stone-800 dark:bg-stone-800 dark:text-stone-100 font-bold text-2xl hover:bg-stone-200 transition dark:bg-stone-800 dark:text-stone-100 dark:hover:bg-stone-700",
     )
 
 
@@ -24,13 +24,13 @@ def step_3_amount() -> rx.Component:
     return rx.el.div(
         rx.el.h2(
             "Enter the Amount",
-            class_name="text-2xl font-bold text-stone-800 text-center mb-4",
+            class_name="text-2xl font-bold text-stone-800 text-center mb-4 dark:text-stone-100",
         ),
         rx.el.div(
             rx.el.span("₹", class_name="text-4xl font-bold text-stone-400"),
             rx.el.p(
                 TransactionState.amount_str,
-                class_name="text-6xl font-bold text-stone-800",
+                class_name="text-6xl font-bold text-stone-800 dark:text-stone-100",
             ),
             class_name="flex items-center justify-center gap-2 mb-4",
         ),

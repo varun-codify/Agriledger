@@ -1,4 +1,4 @@
-"""AG Grid table for cattle management with sorting, filtering, and CSV export."""
+﻿"""AG Grid table for cattle management with sorting, filtering, and CSV export."""
 
 import reflex as rx
 
@@ -93,14 +93,14 @@ def cattle_grid(row_data=None) -> rx.Component:
     if not HAS_AG_GRID:
         return rx.el.div(
             rx.el.p("AG Grid not available. Install with: pip install reflex-ag-grid"),
-            class_name="text-stone-500 text-sm p-4",
+            class_name="text-stone-500 text-sm dark:text-stone-400 p-4 dark:text-stone-400",
         )
 
     data = CattleState.cattle_list if row_data is None else row_data
     return rx.el.div(
         rx.el.h3(
             "All Animals (Table View)",
-            class_name="text-lg font-semibold text-stone-800 mb-4",
+            class_name="text-lg font-semibold text-stone-800 mb-4 dark:text-stone-100",
         ),
         rx_ag.ag_grid(
             id="cattle-grid",
@@ -115,5 +115,5 @@ def cattle_grid(row_data=None) -> rx.Component:
             animate_rows=True,
             class_name="ag-theme-alpine",
         ),
-        class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100",
+        class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 dark:bg-stone-900 dark:border-stone-700",
     )

@@ -55,14 +55,14 @@ class AIInsightsState(rx.State):
         self.chat_input = value
 
     @rx.event
-    def handle_chat_key(self, key: str):
+    async def handle_chat_key(self, key: str):
         if key == "Enter":
-            self.send_chat_message()
+            yield AIInsightsState.send_chat_message()
 
     @rx.event
-    def ask_question(self, question: str):
+    async def ask_question(self, question: str):
         self.chat_input = question
-        self.send_chat_message()
+        yield AIInsightsState.send_chat_message()
 
     @rx.event(background=True)
     async def send_chat_message(self):

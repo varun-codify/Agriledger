@@ -1,4 +1,4 @@
-"""Enhanced AI Insights page with conversational Q&A chatbot.
+﻿"""Enhanced AI Insights page with conversational Q&A chatbot.
 
 Provides a chat interface where farmers can ask questions about their farm data
 and get AI-powered answers. Also shows health score, recommendations, and tips.
@@ -14,7 +14,7 @@ def health_score_card() -> rx.Component:
     return rx.el.div(
         rx.el.div(
             rx.el.h3(
-                "Farm Health Score", class_name="text-lg font-semibold text-stone-800"
+                "Farm Health Score", class_name="text-lg font-semibold text-stone-800 dark:text-stone-100"
             ),
             rx.el.button(
                 rx.icon(
@@ -26,7 +26,7 @@ def health_score_card() -> rx.Component:
                     ),
                 ),
                 on_click=AIInsightsState.refresh_insights,
-                class_name="p-2 rounded-full hover:bg-stone-100 text-stone-500",
+                class_name="p-2 rounded-full hover:bg-stone-100 text-stone-500 dark:hover:bg-stone-700 dark:text-stone-400",
             ),
             class_name="flex justify-between items-center mb-4",
         ),
@@ -49,7 +49,7 @@ def health_score_card() -> rx.Component:
                         "Your farm needs attention. Review the recommendations below.",
                     ),
                 ),
-                class_name="text-center text-sm text-stone-600 mt-2",
+                class_name="text-center text-sm text-stone-600 mt-2 dark:text-stone-300",
             ),
             # Score bar
             rx.el.div(
@@ -61,7 +61,7 @@ def health_score_card() -> rx.Component:
             ),
             class_name="py-6",
         ),
-        class_name="bg-white p-6 rounded-2xl shadow-sm border border-stone-100 h-full",
+        class_name="bg-white p-6 rounded-2xl shadow-sm border border-stone-100 h-full dark:bg-stone-900 dark:border-stone-700",
     )
 
 
@@ -82,14 +82,14 @@ def recommendation_card(rec: dict) -> rx.Component:
                     ("optimization", "h-5 w-5 text-blue-500"),
                     ("warning", "h-5 w-5 text-red-500"),
                     ("opportunity", "h-5 w-5 text-yellow-500"),
-                    "h-5 w-5 text-stone-500",
+                    "h-5 w-5 text-stone-500 dark:text-stone-400",
                 ),
             ),
-            rx.el.h4(rec["title"], class_name="font-semibold text-stone-800 ml-3"),
+            rx.el.h4(rec["title"], class_name="font-semibold text-stone-800 ml-3 dark:text-stone-100"),
             class_name="flex items-center mb-2",
         ),
-        rx.el.p(rec["desc"], class_name="text-sm text-stone-600 ml-8"),
-        class_name="p-4 rounded-xl bg-stone-50 border border-stone-100",
+        rx.el.p(rec["desc"], class_name="text-sm text-stone-600 ml-8 dark:text-stone-300"),
+        class_name="p-4 rounded-xl bg-stone-50 dark:bg-stone-800 border border-stone-100",
     )
 
 
@@ -97,7 +97,7 @@ def insights_widget() -> rx.Component:
     """AI recommendations widget."""
     return rx.el.div(
         rx.el.h3(
-            "AI Recommendations", class_name="text-lg font-semibold text-stone-800 mb-4"
+            "AI Recommendations", class_name="text-lg font-semibold text-stone-800 mb-4 dark:text-stone-100"
         ),
         rx.el.div(
             rx.cond(
@@ -119,21 +119,21 @@ def insights_widget() -> rx.Component:
         rx.el.div(
             rx.el.h4(
                 "Seasonal Tips",
-                class_name="font-semibold text-stone-700 mt-6 mb-3",
+                class_name="font-semibold text-stone-700 mt-6 dark:text-stone-200 mb-3",
             ),
             rx.el.ul(
                 rx.foreach(
                     AIInsightsState.seasonal_tips,
                     lambda tip: rx.el.li(
                         rx.icon("circle-check", class_name="h-4 w-4 text-emerald-500 mr-2"),
-                        rx.el.span(tip, class_name="text-sm text-stone-600"),
+                        rx.el.span(tip, class_name="text-sm text-stone-600 dark:text-stone-300"),
                         class_name="flex items-center py-1",
                     ),
                 ),
                 class_name="space-y-1",
             ),
         ),
-        class_name="bg-white p-6 rounded-2xl shadow-sm border border-stone-100 h-full",
+        class_name="bg-white p-6 rounded-2xl shadow-sm border border-stone-100 h-full dark:bg-stone-900 dark:border-stone-700",
     )
 
 
@@ -157,7 +157,7 @@ def chat_message(message: dict) -> rx.Component:
             class_name=rx.cond(
                 is_user,
                 "bg-emerald-500 text-white px-4 py-3 rounded-2xl rounded-tr-sm text-sm max-w-md",
-                "bg-stone-100 text-stone-800 px-4 py-3 rounded-2xl rounded-tl-sm text-sm max-w-md",
+                "bg-stone-100 text-stone-800 dark:bg-stone-800 dark:text-stone-100 px-4 py-3 rounded-2xl rounded-tl-sm text-sm max-w-md",
             ),
         ),
         class_name=rx.cond(
@@ -175,7 +175,7 @@ def ai_chatbot_section() -> rx.Component:
             rx.icon("brain-circuit", class_name="h-6 w-6 text-emerald-500"),
             rx.el.h3(
                 "Ask AgriLedger AI",
-                class_name="text-lg font-semibold text-stone-800",
+                class_name="text-lg font-semibold text-stone-800 dark:text-stone-100",
             ),
             class_name="flex items-center gap-2 mb-4",
         ),
@@ -186,7 +186,7 @@ def ai_chatbot_section() -> rx.Component:
                 rx.el.div(
                     rx.el.p(
                         "Ask me anything about your farm!",
-                        class_name="text-stone-400 text-center",
+                        class_name="text-stone-400 text-center dark:text-stone-500",
                     ),
                     rx.el.div(
                         rx.foreach(
@@ -211,7 +211,7 @@ def ai_chatbot_section() -> rx.Component:
                     class_name="space-y-1 max-h-96 overflow-y-auto p-2",
                 ),
             ),
-            class_name="bg-stone-50 rounded-xl p-4 min-h-[200px] mb-4",
+            class_name="bg-stone-50 rounded-xl p-4 dark:bg-stone-800 min-h-[200px] mb-4",
         ),
         # Input area
         rx.el.div(
@@ -229,5 +229,5 @@ def ai_chatbot_section() -> rx.Component:
             ),
             class_name="flex items-center gap-2",
         ),
-        class_name="bg-white p-6 rounded-2xl shadow-sm border border-stone-100",
+        class_name="bg-white p-6 rounded-2xl shadow-sm border border-stone-100 dark:bg-stone-900 dark:border-stone-700",
     )

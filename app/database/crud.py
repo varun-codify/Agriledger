@@ -4,7 +4,7 @@ import uuid as _uuid
 from datetime import datetime
 from typing import Optional
 
-from app.database.connection import get_db
+from app.database.connection import get_db, is_stale_loop_error, reset_db_client, with_loop_retry
 from app.database.models import (
     ActivityLog,
     BreedingCycle,
@@ -31,24 +31,48 @@ _USER_CACHE: dict[str, tuple[float, User | None]] = {}
 _SEEDED_FARMS: set[tuple[str, str]] = set()
 
 
+class DatabaseUnavailableError(Exception):
+    """Raised when MongoDB cannot be reached (as opposed to 'row not found')."""
+
+
 def invalidate_user_cache(email: str) -> None:
     _USER_CACHE.pop(email.strip().lower(), None)
 
 
 async def get_user_by_email(email: str) -> User | None:
+    """Fetch a user by email.
+
+    Returns None only when the account truly does not exist. Connection /
+    stale-loop failures raise :class:`DatabaseUnavailableError` so callers can
+    show a 'try again' message instead of a false 'no account found'.
+    """
     normalized_email = email.strip().lower()
     now = time.time()
     cached = _USER_CACHE.get(normalized_email)
     if cached and (now - cached[0] < 60):
         return cached[1]
-    try:
+
+    async def _query():
         db = get_db()
-        user = await db.users.find_one({"email": normalized_email}, {"_id": 0})
-        _USER_CACHE[normalized_email] = (now, user)
-        return user
+        return await db.users.find_one({"email": normalized_email}, {"_id": 0})
+
+    try:
+        user = await with_loop_retry(_query)
     except Exception as e:
-        logging.exception(f"Error fetching user: {e}")
-        return None
+        if is_stale_loop_error(e):
+            # One more attempt after the client was rebuilt inside with_loop_retry.
+            try:
+                reset_db_client()
+                user = await with_loop_retry(_query)
+            except Exception as e2:
+                logging.exception(f"Error fetching user: {e2}")
+                raise DatabaseUnavailableError("Database is unavailable.") from e2
+        else:
+            logging.exception(f"Error fetching user: {e}")
+            raise DatabaseUnavailableError("Database is unavailable.") from e
+    # Only cache definitive results (found or not-found), never errors.
+    _USER_CACHE[normalized_email] = (now, user)
+    return user
 
 
 
@@ -147,9 +171,18 @@ async def update_user_farm_id(email: str, farm_id: str) -> bool:
 
 
 async def create_user(user: User) -> bool:
+    email = str(user.get("email", "")).strip().lower()
     try:
-        db = get_db()
-        await db.users.insert_one(_to_plain(user))
+        async def _insert():
+            db = get_db()
+            await db.users.insert_one(_to_plain(user))
+            return True
+
+        await with_loop_retry(_insert)
+        # Critical: register() just looked up this email (caching None).
+        # Without this, login within 60s would read the stale miss.
+        if email:
+            invalidate_user_cache(email)
         return True
     except Exception as e:
         logging.exception(f"Error creating user: {e}")

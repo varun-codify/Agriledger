@@ -47,7 +47,7 @@ def step_1_type() -> rx.Component:
     return rx.el.div(
         rx.el.h2(
             "What kind of transaction is this?",
-            class_name="text-2xl font-bold text-stone-800 text-center mb-8",
+            class_name="text-2xl font-bold text-stone-800 text-center mb-8 dark:text-stone-100",
         ),
         rx.el.div(
             type_selection_card("income", "trending-up", "Money earned"),

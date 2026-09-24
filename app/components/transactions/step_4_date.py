@@ -1,4 +1,4 @@
-import datetime
+﻿import datetime
 
 import reflex as rx
 
@@ -16,7 +16,7 @@ def date_quick_button(label: str, days_offset: int) -> rx.Component:
         class_name=rx.cond(
             is_selected,
             "px-6 py-2 rounded-lg bg-emerald-500 text-white font-semibold transition",
-            "px-6 py-2 rounded-lg bg-stone-100 text-stone-700 font-semibold hover:bg-stone-200 transition",
+            "px-6 py-2 rounded-lg bg-stone-100 text-stone-700 font-semibold hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-200 dark:hover:bg-stone-700 transition",
         ),
     )
 
@@ -26,7 +26,7 @@ def step_4_date() -> rx.Component:
     return rx.el.div(
         rx.el.h2(
             "When did this transaction happen?",
-            class_name="text-2xl font-bold text-stone-800 text-center mb-8",
+            class_name="text-2xl font-bold text-stone-800 dark:text-stone-100 text-center mb-8 dark:text-stone-100",
         ),
         rx.el.div(
             date_quick_button("Today", 0),

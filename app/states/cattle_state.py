@@ -300,6 +300,7 @@ class CattleState(rx.State):
     view_mode: str = "cards"  # "cards" | "table"
     add_cattle_error: str = ""
     dialog_error: str = ""
+    is_adding: bool = False
 
     def _reset_form_fields(self):
         self.new_cattle_date = datetime.date.today().isoformat()
@@ -324,96 +325,116 @@ class CattleState(rx.State):
     @rx.event
     async def add_cattle(self, form_data: dict):
         """Adds a new cattle to the list."""
-        # Validate each field with a clear message; never clear the form on error.
-        name = str(form_data.get("name", "")).strip()
-        tag_number = str(form_data.get("tag_number", "")).strip()
-        animal_type = str(form_data.get("animal_type", "")).strip()
-        breed = str(form_data.get("breed", "")).strip()
-        age_raw = str(form_data.get("age", "")).strip()
-        weight_raw = str(form_data.get("weight", "")).strip()
-        price_raw = str(form_data.get("purchase_price", "")).strip()
-        purchase_date = str(form_data.get("purchase_date", "")).strip()
-
-        if not name:
-            self.add_cattle_error = "Name is required."
-            return
-        if not tag_number:
-            self.add_cattle_error = "Tag number is required."
-            return
-        if not animal_type:
-            self.add_cattle_error = "Please select an animal type."
-            return
-        if not age_raw:
-            self.add_cattle_error = "Age is mandatory."
-            return
-        if not purchase_date:
-            self.add_cattle_error = "Purchase date is mandatory."
-            return
+        if self.is_adding:
+            return None
+        self.is_adding = True
         try:
-            age = int(age_raw)
-            if age < 0:
-                self.add_cattle_error = "Age cannot be negative."
-                return
-        except ValueError:
-            self.add_cattle_error = "Age must be a valid whole number."
-            return
+            # Validate each field with a clear message; never clear the form on error.
+            name = str(form_data.get("name", "")).strip()
+            tag_number = str(form_data.get("tag_number", "")).strip()
+            animal_type = str(form_data.get("animal_type", "")).strip()
+            breed = str(form_data.get("breed", "")).strip()
+            age_raw = str(form_data.get("age", "")).strip()
+            weight_raw = str(form_data.get("weight", "")).strip()
+            price_raw = str(form_data.get("purchase_price", "")).strip()
+            purchase_date = str(form_data.get("purchase_date", "")).strip()
 
-        weight = None
-        if weight_raw:
+            if not name:
+                self.add_cattle_error = "Name is required."
+                return
+            if not tag_number:
+                self.add_cattle_error = "Tag number is required."
+                return
+            if not animal_type:
+                self.add_cattle_error = "Please select an animal type."
+                return
+            if not age_raw:
+                self.add_cattle_error = "Age is mandatory."
+                return
+            if not purchase_date:
+                self.add_cattle_error = "Purchase date is mandatory."
+                return
             try:
-                weight = float(weight_raw)
+                age = int(age_raw)
+                if age < 0:
+                    self.add_cattle_error = "Age cannot be negative."
+                    return
             except ValueError:
-                self.add_cattle_error = "Weight must be a valid number."
+                self.add_cattle_error = "Age must be a valid whole number."
                 return
 
-        purchase_price = 0.0
-        if price_raw:
+            weight = None
+            if weight_raw:
+                try:
+                    weight = float(weight_raw)
+                except ValueError:
+                    self.add_cattle_error = "Weight must be a valid number."
+                    return
+
+            purchase_price = 0.0
+            if price_raw:
+                try:
+                    purchase_price = float(price_raw)
+                except ValueError:
+                    self.add_cattle_error = "Purchase price must be a valid number."
+                    return
+
+            iso_purchase_date = _normalize_iso_date(purchase_date)
+            if not iso_purchase_date:
+                self.add_cattle_error = "Purchase date must be a valid date."
+                return
+
             try:
-                purchase_price = float(price_raw)
-            except ValueError:
-                self.add_cattle_error = "Purchase price must be a valid number."
-                return
+                auth = await self.get_state(AuthState)
+                new_cattle: Cattle = {
+                    "id": str(uuid.uuid4()),
+                    "name": name,
+                    "animal_type": animal_type,
+                    "tag_number": tag_number,
+                    "age": age,
+                    "breed": breed,
+                    "purchase_date": iso_purchase_date,
+                    "purchase_price": purchase_price,
+                    "image_url": f"https://api.dicebear.com/9.x/notionists/svg?seed={name}",
+                    "health_status": "Healthy",
+                    "milk_production": [],
+                    "vaccinations": [],
+                    "health_notes": [],
+                    "feed_records": [],
+                    "is_juvenile": _to_bool(form_data.get("is_juvenile", False)),
+                    "parent_id": form_data.get("parent_id"),
+                    "mother_id": form_data.get("mother_id"),
+                    "weight": weight,
+                    "is_active": True,
+                    "farm_id": auth.farm_id,
+                }
+                success = await crud.create_cattle(new_cattle)
+                if success:
+                    self.cattle_list.append(new_cattle)
+                    self.add_cattle_error = ""
+                    self.toggle_add_cattle_dialog(False)
+                    try:
+                        from app.states.notification_state import NotificationState
 
-        iso_purchase_date = _normalize_iso_date(purchase_date)
-        if not iso_purchase_date:
-            self.add_cattle_error = "Purchase date must be a valid date."
-            return
-
-        try:
-            auth = await self.get_state(AuthState)
-            new_cattle: Cattle = {
-                "id": str(uuid.uuid4()),
-                "name": name,
-                "animal_type": animal_type,
-                "tag_number": tag_number,
-                "age": age,
-                "breed": breed,
-                "purchase_date": iso_purchase_date,
-                "purchase_price": purchase_price,
-                "image_url": f"https://api.dicebear.com/9.x/notionists/svg?seed={name}",
-                "health_status": "Healthy",
-                "milk_production": [],
-                "vaccinations": [],
-                "health_notes": [],
-                "feed_records": [],
-                "is_juvenile": _to_bool(form_data.get("is_juvenile", False)),
-                "parent_id": form_data.get("parent_id"),
-                "mother_id": form_data.get("mother_id"),
-                "weight": weight,
-                "is_active": True,
-                "farm_id": auth.farm_id,
-            }
-            success = await crud.create_cattle(new_cattle)
-            if success:
-                self.cattle_list.append(new_cattle)
-                self.add_cattle_error = ""
-                self.toggle_add_cattle_dialog(False)
-                return rx.toast.success("Animal added successfully!")
-            else:
-                self.add_cattle_error = "Failed to save animal to database. Please try again."
-        except Exception as e:  # noqa: BLE001 - surface a friendly message, log details
-            logging.exception(f"Error adding animal: {e}")
-            self.add_cattle_error = "Something went wrong while saving. Please check your inputs."
+                        notif = await self.get_state(NotificationState)
+                        notif.add_notification(
+                            {
+                                "title": "Animal added",
+                                "message": f"{new_cattle['name']} is now in your herd.",
+                                "type": "success",
+                                "timestamp": "",
+                            }
+                        )
+                    except Exception:
+                        pass
+                    return rx.toast.success("Animal added successfully!")
+                else:
+                    self.add_cattle_error = "Failed to save animal to database. Please try again."
+            except Exception as e:  # noqa: BLE001 - surface a friendly message, log details
+                logging.exception(f"Error adding animal: {e}")
+                self.add_cattle_error = "Something went wrong while saving. Please check your inputs."
+        finally:
+            self.is_adding = False
 
     @rx.var
     def total_cattle(self) -> int:

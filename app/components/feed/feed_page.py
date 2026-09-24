@@ -1,4 +1,4 @@
-"""Feed Intelligence pages.
+﻿"""Feed Intelligence pages.
 
 - ``Operations`` tab — daily operations: overview cards, daily feeding,
   inventory (incl. crops→feed stock), feeding plans, AI advisor, reports.
@@ -42,7 +42,7 @@ def nav_pill(item: rx.Var) -> rx.Component:
         class_name=rx.cond(
             FeedState.active_section == item[0],
             "flex-shrink-0 px-4 py-2 rounded-full bg-emerald-500 text-white text-sm font-semibold transition-all",
-            "flex-shrink-0 px-4 py-2 rounded-full bg-stone-100 text-stone-600 text-sm font-semibold hover:bg-emerald-100 hover:text-emerald-700 transition-all",
+            "flex-shrink-0 px-4 py-2 rounded-full bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300 text-sm font-semibold hover:bg-emerald-100 hover:text-emerald-700 transition-all",
         ),
     )
 
@@ -51,7 +51,7 @@ def quick_nav(items: list, extra: rx.Component | None = None) -> rx.Component:
     return rx.el.div(
         rx.foreach(items, nav_pill),
         extra,
-        class_name="sticky top-0 z-20 flex flex-wrap items-center gap-2 bg-white/90 backdrop-blur p-3 rounded-2xl border border-stone-100 shadow-sm mb-6",
+        class_name="sticky top-0 z-20 flex flex-wrap items-center gap-2 bg-white/90 backdrop-blur p-3 rounded-2xl border border-stone-100 dark:bg-stone-900/90 dark:border-stone-700 shadow-sm mb-6",
     )
 
 
@@ -65,7 +65,7 @@ def feed_view_tabs() -> rx.Component:
             class_name=rx.cond(
                 FeedState.active_view == "operations",
                 "flex items-center px-5 py-2.5 rounded-xl bg-emerald-500 text-white font-semibold text-sm transition-all",
-                "flex items-center px-5 py-2.5 rounded-xl bg-white text-stone-600 font-semibold text-sm border border-stone-200 hover:bg-stone-50 transition-all",
+                "flex items-center px-5 py-2.5 rounded-xl bg-white text-stone-600 font-semibold text-sm border border-stone-200 hover:bg-stone-50 dark:bg-stone-800 dark:text-stone-300 dark:border-stone-600 dark:hover:bg-stone-700 transition-all",
             ),
         ),
         rx.el.button(
@@ -75,7 +75,7 @@ def feed_view_tabs() -> rx.Component:
             class_name=rx.cond(
                 FeedState.active_view == "analytics",
                 "flex items-center px-5 py-2.5 rounded-xl bg-emerald-500 text-white font-semibold text-sm transition-all",
-                "flex items-center px-5 py-2.5 rounded-xl bg-white text-stone-600 font-semibold text-sm border border-stone-200 hover:bg-stone-50 transition-all",
+                "flex items-center px-5 py-2.5 rounded-xl bg-white text-stone-600 font-semibold text-sm border border-stone-200 hover:bg-stone-50 dark:bg-stone-800 dark:text-stone-300 dark:border-stone-600 dark:hover:bg-stone-700 transition-all",
             ),
         ),
         class_name="flex gap-2 mb-6",

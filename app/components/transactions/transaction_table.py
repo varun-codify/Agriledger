@@ -1,4 +1,4 @@
-"""AG Grid table for transactions with sorting, filtering, and CSV export."""
+﻿"""AG Grid table for transactions with sorting, filtering, and CSV export."""
 
 import reflex as rx
 
@@ -173,13 +173,13 @@ def transactions_grid() -> rx.Component:
     if not HAS_AG_GRID:
         return rx.el.div(
             rx.el.p("AG Grid not available. Install with: pip install reflex-ag-grid"),
-            class_name="text-stone-500 text-sm p-4",
+            class_name="text-stone-500 text-sm dark:text-stone-400 p-4",
         )
 
     return rx.el.div(
         rx.el.h3(
             "All Transactions",
-            class_name="text-lg font-semibold text-stone-800 mb-4",
+            class_name="text-lg font-semibold text-stone-800 mb-4 dark:text-stone-100",
         ),
         rx_ag.ag_grid(
             id="transactions-grid",
@@ -195,7 +195,7 @@ def transactions_grid() -> rx.Component:
             class_name="ag-theme-alpine",
             width="100%",
         ),
-        class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100",
+        class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 dark:bg-stone-900 dark:border-stone-700",
     )
 
 
@@ -204,13 +204,13 @@ def milk_sales_grid() -> rx.Component:
     if not HAS_AG_GRID:
         return rx.el.div(
             rx.el.p("AG Grid not available."),
-            class_name="text-stone-500 text-sm p-4",
+            class_name="text-stone-500 text-sm dark:text-stone-400 p-4",
         )
 
     return rx.el.div(
         rx.el.h3(
             "Milk Sales",
-            class_name="text-lg font-semibold text-stone-800 mb-4",
+            class_name="text-lg font-semibold text-stone-800 mb-4 dark:text-stone-100",
         ),
         rx_ag.ag_grid(
             id="milk-sales-grid",
@@ -225,7 +225,7 @@ def milk_sales_grid() -> rx.Component:
             class_name="ag-theme-alpine",
             width="100%",
         ),
-        class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100",
+        class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 dark:bg-stone-900 dark:border-stone-700",
     )
 
 
@@ -234,13 +234,13 @@ def coconut_sales_grid() -> rx.Component:
     if not HAS_AG_GRID:
         return rx.el.div(
             rx.el.p("AG Grid not available."),
-            class_name="text-stone-500 text-sm p-4",
+            class_name="text-stone-500 text-sm dark:text-stone-400 p-4",
         )
 
     return rx.el.div(
         rx.el.h3(
             "Coconut Sales",
-            class_name="text-lg font-semibold text-stone-800 mb-4",
+            class_name="text-lg font-semibold text-stone-800 mb-4 dark:text-stone-100",
         ),
         rx_ag.ag_grid(
             id="coconut-sales-grid",
@@ -255,7 +255,7 @@ def coconut_sales_grid() -> rx.Component:
             class_name="ag-theme-alpine",
             width="100%",
         ),
-        class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100",
+        class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 dark:bg-stone-900 dark:border-stone-700",
     )
 
 
@@ -281,7 +281,7 @@ def transactions_page() -> rx.Component:
                     rx.icon("plus", class_name="h-4 w-4 mr-2"),
                     "Add Transaction",
                     href="/add-transaction",
-                    class_name="flex items-center bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-emerald-600 transition-all",
+                    class_name="flex items-center min-h-[44px] bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-emerald-600 transition-all active:scale-[0.98] shadow-sm focus-visible:ring-2 focus-visible:ring-emerald-400",
                 ),
                 class_name="flex items-center justify-between mb-6 flex-wrap gap-4",
             ),

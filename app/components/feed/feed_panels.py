@@ -1,4 +1,4 @@
-"""Feed Intelligence panels.
+﻿"""Feed Intelligence panels.
 
 Farmer-first UI: big buttons, minimal typing, icons over text.
 Daily feeding is a 3-tap flow — tap animal → tap feed → tap quantity → Record.
@@ -22,14 +22,14 @@ def section(title: str, subtitle: str, icon: str, content, id: str) -> rx.Compon
         rx.el.div(
             rx.icon(icon, class_name="h-6 w-6 text-emerald-500"),
             rx.el.div(
-                rx.el.h2(title, class_name="text-xl font-bold text-stone-800"),
-                rx.el.p(subtitle, class_name="text-sm text-stone-500"),
+                rx.el.h2(title, class_name="text-xl font-bold text-stone-800 dark:text-stone-100"),
+                rx.el.p(subtitle, class_name="text-sm text-stone-500 dark:text-stone-400"),
                 class_name="ml-3",
             ),
             class_name="flex items-center mb-5",
         ),
         content,
-        class_name="bg-white p-6 rounded-2xl shadow-sm border border-stone-100 scroll-mt-24",
+        class_name="bg-white p-6 rounded-2xl shadow-sm border border-stone-100 scroll-mt-24 dark:bg-stone-900 dark:border-stone-700",
         id=id,
     )
 
@@ -43,12 +43,12 @@ def feed_card(card: rx.Var[dict]) -> rx.Component:
             class_name=f"w-11 h-11 rounded-xl flex items-center justify-center {card['color']}",
         ),
         rx.el.div(
-            rx.el.p(card["title"], class_name="text-xs font-medium text-stone-500 mt-3"),
-            rx.el.p(card["value"], class_name="text-xl font-bold text-stone-800 truncate"),
+            rx.el.p(card["title"], class_name="text-xs font-medium text-stone-500 dark:text-stone-400 mt-3"),
+            rx.el.p(card["value"], class_name="text-xl font-bold text-stone-800 dark:text-stone-100 truncate"),
             rx.el.p(card["sub"], class_name="text-xs text-stone-400 truncate"),
             class_name="flex-1 min-w-0",
         ),
-        class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 flex gap-4 items-start min-w-0",
+        class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 flex gap-4 items-start min-w-0 dark:bg-stone-900 dark:border-stone-700",
     )
 
 
@@ -78,7 +78,7 @@ def animal_chip(animal: rx.Var[dict]) -> rx.Component:
         class_name=rx.cond(
             FeedState.feeding_animal_id == animal["id"],
             "flex flex-col gap-1 p-2 rounded-xl bg-emerald-50 border-2 border-emerald-500 w-24 flex-shrink-0",
-            "flex flex-col gap-1 p-2 rounded-xl bg-stone-50 border-2 border-transparent hover:bg-stone-100 w-24 flex-shrink-0",
+            "flex flex-col gap-1 p-2 rounded-xl bg-stone-50 dark:bg-stone-800 border-2 border-transparent hover:bg-stone-100 w-24 flex-shrink-0",
         ),
     )
 
@@ -88,13 +88,13 @@ def feed_type_chip(ft: rx.Var[dict]) -> rx.Component:
         rx.el.span(ft["name"], class_name="font-semibold text-sm"),
         rx.el.span(
             f"{ft['unit']} · ₹{ft['cost_per_unit']:.0f}",
-            class_name="text-xs text-stone-500",
+            class_name="text-xs text-stone-500 dark:text-stone-400",
         ),
         on_click=lambda: FeedState.set_feeding_feed_type_id(ft["id"]),
         class_name=rx.cond(
             FeedState.feeding_feed_type_id == ft["id"],
             "flex flex-col items-start px-4 py-3 rounded-xl bg-emerald-500 text-white border-2 border-emerald-600",
-            "flex flex-col items-start px-4 py-3 rounded-xl bg-stone-50 text-stone-800 border-2 border-transparent hover:bg-stone-100",
+            "flex flex-col items-start px-4 py-3 rounded-xl bg-stone-50 dark:bg-stone-800 text-stone-800 dark:text-stone-100 border-2 border-transparent hover:bg-stone-100",
         ),
     )
 
@@ -108,7 +108,7 @@ def keypad_button(key: str) -> rx.Component:
         ),
         on_click=lambda: FeedState.handle_feeding_keypad(key),
         class_name=(
-            "h-14 rounded-xl bg-stone-100 text-stone-800 text-xl font-bold "
+            "h-14 rounded-xl bg-stone-100 text-stone-800 dark:bg-stone-800 dark:text-stone-100 text-xl font-bold "
             "hover:bg-emerald-100 active:scale-95 transition-all"
         ),
     )
@@ -126,14 +126,14 @@ def daily_feeding_panel() -> rx.Component:
                 rx.el.div(
                     rx.el.p(
                         "No animals yet. Add animals in the Animal Management page first.",
-                        class_name="text-sm text-stone-500",
+                        class_name="text-sm text-stone-500 dark:text-stone-400",
                     ),
                     rx.el.a(
                         "Go to Animals",
                         href="/cattle",
                         class_name="mt-2 inline-block text-sm font-semibold text-emerald-600",
                     ),
-                    class_name="bg-stone-50 rounded-xl p-4 text-center",
+                    class_name="bg-stone-50 rounded-xl p-4 dark:bg-stone-800 text-center dark:bg-stone-800",
                 ),
                 rx.el.div(
                     rx.foreach(CattleState.cattle_list, animal_chip),
@@ -143,7 +143,7 @@ def daily_feeding_panel() -> rx.Component:
             # Step 2: feed type
             rx.el.p(
                 "Choose Feed",
-                class_name="text-sm font-semibold text-stone-600 mt-5 mb-2",
+                class_name="text-sm font-semibold text-stone-600 dark:text-stone-300 mt-5 mb-2",
             ),
             rx.el.div(
                 rx.foreach(FeedState.feed_types, feed_type_chip),
@@ -153,7 +153,7 @@ def daily_feeding_panel() -> rx.Component:
             rx.el.div(
                 rx.el.p(
                     "Time of Day",
-                    class_name="text-sm font-semibold text-stone-600 mt-5 mb-2",
+                    class_name="text-sm font-semibold text-stone-600 dark:text-stone-300 mt-5 mb-2",
                 ),
                 rx.el.div(
                     rx.el.button(
@@ -162,7 +162,7 @@ def daily_feeding_panel() -> rx.Component:
                         class_name=rx.cond(
                             FeedState.feeding_time_of_day == "Morning",
                             "flex-1 px-4 py-3 rounded-xl bg-amber-500 text-white font-bold text-lg",
-                            "flex-1 px-4 py-3 rounded-xl bg-stone-100 text-stone-600 font-bold text-lg hover:bg-stone-200",
+                            "flex-1 px-4 py-3 rounded-xl bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300 font-bold text-lg hover:bg-stone-200",
                         ),
                     ),
                     rx.el.button(
@@ -171,7 +171,7 @@ def daily_feeding_panel() -> rx.Component:
                         class_name=rx.cond(
                             FeedState.feeding_time_of_day == "Evening",
                             "flex-1 px-4 py-3 rounded-xl bg-indigo-500 text-white font-bold text-lg",
-                            "flex-1 px-4 py-3 rounded-xl bg-stone-100 text-stone-600 font-bold text-lg hover:bg-stone-200",
+                            "flex-1 px-4 py-3 rounded-xl bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300 font-bold text-lg hover:bg-stone-200",
                         ),
                     ),
                     class_name="flex gap-3",
@@ -193,7 +193,7 @@ def daily_feeding_panel() -> rx.Component:
                         ),
                         class_name="flex gap-2 justify-center mt-2",
                     ),
-                    class_name="bg-stone-50 rounded-2xl p-6 mt-5",
+                    class_name="bg-stone-50 rounded-2xl p-6 dark:bg-stone-800 mt-5",
                 ),
                 # Keypad
                 rx.el.div(
@@ -207,7 +207,7 @@ def daily_feeding_panel() -> rx.Component:
                     placeholder="Notes (optional)",
                     value=FeedState.feeding_notes,
                     on_change=FeedState.set_feeding_notes,
-                    class_name="w-full px-4 py-3 rounded-xl border border-stone-200 mt-4",
+                    class_name="w-full px-4 py-3 rounded-xl border border-stone-200 mt-4 dark:bg-stone-800 dark:border-stone-600 dark:text-stone-100 min-h-[44px]",
                 ),
                 rx.cond(
                     FeedState.feeding_success != "",
@@ -255,20 +255,20 @@ def stock_status_badge(stock: rx.Var[dict]) -> rx.Component:
 def stock_card(stock: rx.Var[dict]) -> rx.Component:
     return rx.el.div(
         rx.el.div(
-            rx.el.p(stock["feed_name"], class_name="font-bold text-stone-800"),
+            rx.el.p(stock["feed_name"], class_name="font-bold text-stone-800 dark:text-stone-100"),
             stock_status_badge(stock),
             class_name="flex items-center justify-between gap-2",
         ),
         rx.el.p(
             f"{stock['quantity']} {stock['unit']}",
-            class_name="text-2xl font-extrabold text-stone-800 mt-2",
+            class_name="text-2xl font-extrabold text-stone-800 dark:text-stone-100 mt-2",
         ),
         rx.el.div(
             rx.cond(
                 stock["supplier"] != "",
                 rx.el.p(
                     f"From {stock['supplier']}",
-                    class_name="text-xs text-stone-500",
+                    class_name="text-xs text-stone-500 dark:text-stone-400",
                 ),
                 None,
             ),
@@ -282,13 +282,13 @@ def stock_card(stock: rx.Var[dict]) -> rx.Component:
             ),
             class_name="mt-1 space-y-0.5",
         ),
-        class_name="bg-stone-50 p-4 rounded-xl border border-stone-100",
+        class_name="bg-stone-50 p-4 rounded-xl dark:bg-stone-800 border border-stone-100 dark:bg-stone-800 dark:border-stone-700",
     )
 
 
 def feed_type_card(ft: rx.Var[dict]) -> rx.Component:
     return rx.el.div(
-        rx.el.p(ft["name"], class_name="font-semibold text-stone-800 text-sm"),
+        rx.el.p(ft["name"], class_name="font-semibold text-stone-800 text-sm dark:text-stone-100"),
         rx.el.span(
             rx.cond(
                 ft["category"] == "Concentrate",
@@ -303,9 +303,9 @@ def feed_type_card(ft: rx.Var[dict]) -> rx.Component:
         ),
         rx.el.p(
             f"₹{ft['cost_per_unit']:.0f} / {ft['unit']}",
-            class_name="text-xs text-stone-500 mt-1",
+            class_name="text-xs text-stone-500 dark:text-stone-400 mt-1",
         ),
-        class_name="bg-white p-3 rounded-xl border border-stone-200 flex flex-col gap-1",
+        class_name="bg-white p-3 rounded-xl border border-stone-200 flex flex-col gap-1 dark:bg-stone-800 dark:border-stone-700",
     )
 
 
@@ -314,10 +314,10 @@ def homegrown_crop_card(row: rx.Var[dict]) -> rx.Component:
         rx.el.div(
             rx.el.span("🌾", class_name="text-2xl"),
             rx.el.div(
-                rx.el.p(row["name"], class_name="font-bold text-stone-800 text-sm"),
+                rx.el.p(row["name"], class_name="font-bold text-stone-800 dark:text-stone-100 text-sm dark:text-stone-100"),
                 rx.el.p(
                     f"{row['harvested']} {row['unit']} harvested · {row['moved']} {row['unit']} in stock",
-                    class_name="text-xs text-stone-500",
+                    class_name="text-xs text-stone-500 dark:text-stone-400",
                 ),
                 class_name="flex-1 min-w-0",
             ),
@@ -342,7 +342,7 @@ def homegrown_crop_card(row: rx.Var[dict]) -> rx.Component:
             ),
             None,
         ),
-        class_name="bg-white p-3 rounded-xl border border-stone-200",
+        class_name="bg-white p-3 rounded-xl border border-stone-200 dark:bg-stone-800 dark:border-stone-700",
     )
 
 
@@ -352,7 +352,7 @@ def homegrown_crops_section() -> rx.Component:
             rx.el.div(
                 rx.el.p(
                     "Home-Grown Crops → Feed Stock",
-                    class_name="text-sm font-semibold text-stone-600",
+                    class_name="text-sm font-semibold text-stone-600 dark:text-stone-300",
                 ),
                 rx.el.p(
                     "Fodder harvests move into feed stock automatically on page load.",
@@ -372,7 +372,7 @@ def homegrown_crops_section() -> rx.Component:
             FeedState.homegrown_summary.length() == 0,
             rx.el.p(
                 "Record a harvest on a fodder crop (e.g. Cholam, sorghum, straw) and it will appear here and move into feed stock automatically.",
-                class_name="text-xs text-stone-500 text-center py-4 bg-stone-50 rounded-xl mt-3",
+                class_name="text-xs text-stone-500 dark:text-stone-400 text-center py-4 bg-stone-50 rounded-xl mt-3 dark:bg-stone-800",
             ),
             rx.el.div(
                 rx.foreach(FeedState.homegrown_summary, homegrown_crop_card),
@@ -392,7 +392,7 @@ def inventory_panel() -> rx.Component:
             rx.el.div(
                 rx.el.p(
                     "Feed Types",
-                    class_name="text-sm font-semibold text-stone-600 mb-2",
+                    class_name="text-sm font-semibold text-stone-600 dark:text-stone-300 mb-2",
                 ),
                 rx.el.div(
                     rx.foreach(FeedState.feed_types, feed_type_card),
@@ -409,7 +409,7 @@ def inventory_panel() -> rx.Component:
                 rx.el.div(
                     rx.el.p(
                         "Current Stock",
-                        class_name="text-sm font-semibold text-stone-600 mb-2",
+                        class_name="text-sm font-semibold text-stone-600 dark:text-stone-300 mb-2",
                     ),
                     rx.el.button(
                         rx.icon("plus", class_name="h-4 w-4 mr-1"),
@@ -424,9 +424,9 @@ def inventory_panel() -> rx.Component:
                     rx.el.div(
                         rx.el.p(
                             "No stock recorded yet. Add your first purchase.",
-                            class_name="text-sm text-stone-500 text-center py-6",
+                            class_name="text-sm text-stone-500 dark:text-stone-400 text-center py-6",
                         ),
-                        class_name="bg-stone-50 rounded-xl",
+                        class_name="bg-stone-50 rounded-xl dark:bg-stone-800",
                     ),
                     rx.el.div(
                         rx.foreach(FeedState.inventory, stock_card),
@@ -445,10 +445,10 @@ def inventory_panel() -> rx.Component:
 
 def plan_item(item: rx.Var[dict]) -> rx.Component:
     return rx.el.div(
-        rx.el.span(item["feed_name"], class_name="text-sm font-medium text-stone-700"),
+        rx.el.span(item["feed_name"], class_name="text-sm font-medium text-stone-700 dark:text-stone-200"),
         rx.el.span(
             f"{item['quantity']} {item['unit']}",
-            class_name="text-sm font-bold text-stone-800",
+            class_name="text-sm font-bold text-stone-800 dark:text-stone-100",
         ),
         class_name="flex items-center justify-between py-1 border-b border-dashed border-stone-200 last:border-0",
     )
@@ -457,7 +457,7 @@ def plan_item(item: rx.Var[dict]) -> rx.Component:
 def plan_card(plan: rx.Var[dict]) -> rx.Component:
     return rx.el.div(
         rx.el.div(
-            rx.el.p(plan["name"], class_name="font-bold text-stone-800"),
+            rx.el.p(plan["name"], class_name="font-bold text-stone-800 dark:text-stone-100"),
             rx.el.span(
                 "💧 Water reminder",
                 class_name=rx.cond(
@@ -490,7 +490,7 @@ def plan_card(plan: rx.Var[dict]) -> rx.Component:
             plan["minerals"] != "",
             rx.el.div(
                 rx.icon("pill", class_name="h-4 w-4 text-emerald-500"),
-                rx.el.span(plan["minerals"], class_name="text-xs text-stone-600"),
+                rx.el.span(plan["minerals"], class_name="text-xs text-stone-600 dark:text-stone-300"),
                 class_name="flex items-center gap-1 mt-3",
             ),
             None,
@@ -501,7 +501,7 @@ def plan_card(plan: rx.Var[dict]) -> rx.Component:
             on_click=lambda: FeedState.bulk_feed_plan(plan["id"]),
             class_name="mt-3 w-full flex items-center justify-center text-xs font-bold px-3 py-2 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 transition-all",
         ),
-        class_name="bg-stone-50 p-4 rounded-xl border border-stone-100",
+        class_name="bg-stone-50 p-4 rounded-xl dark:bg-stone-800 border border-stone-100 dark:bg-stone-800 dark:border-stone-700",
     )
 
 
@@ -515,7 +515,7 @@ def feeding_plans_panel() -> rx.Component:
                 FeedState.feeding_plans.length() == 0,
                 rx.el.p(
                     "No plans yet. Create one to standardize your feeding routine.",
-                    class_name="text-sm text-stone-500 text-center py-6 bg-stone-50 rounded-xl",
+                    class_name="text-sm text-stone-500 dark:text-stone-400 text-center py-6 bg-stone-50 rounded-xl dark:bg-stone-800",
                 ),
                 rx.el.div(
                     rx.foreach(FeedState.feeding_plans, plan_card),
@@ -538,7 +538,7 @@ def feeding_plans_panel() -> rx.Component:
 def ration_item(item: rx.Var[dict]) -> rx.Component:
     return rx.el.div(
         rx.el.div(
-            rx.el.span(item["name"], class_name="font-semibold text-sm text-stone-700"),
+            rx.el.span(item["name"], class_name="font-semibold text-sm text-stone-700 dark:text-stone-200"),
             rx.cond(
                 item["in_stock"],
                 rx.el.span(
@@ -551,9 +551,9 @@ def ration_item(item: rx.Var[dict]) -> rx.Component:
         ),
         rx.el.span(
             f"{item['qty']} {item['unit']} · ₹{item['cost']:.0f}",
-            class_name="text-xs text-stone-500",
+            class_name="text-xs text-stone-500 dark:text-stone-400",
         ),
-        class_name="flex items-center justify-between bg-stone-50 p-3 rounded-lg",
+        class_name="flex items-center justify-between bg-stone-50 p-3 rounded-lg dark:bg-stone-800",
     )
 
 
@@ -565,7 +565,7 @@ def ration_optimizer_panel() -> rx.Component:
         rx.el.div(
             rx.el.label(
                 "Animal Group",
-                class_name="block text-sm font-medium text-stone-700 mb-1",
+                class_name="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-200 dark:text-stone-300",
             ),
             rx.el.select(
                 rx.foreach(
@@ -574,13 +574,13 @@ def ration_optimizer_panel() -> rx.Component:
                 ),
                 value=FeedState.ration_category,
                 on_change=FeedState.set_ration_category,
-                class_name="w-full px-3 py-2 border rounded-md bg-white",
+                class_name="w-full px-3 py-2 border rounded-md bg-white dark:bg-stone-800 dark:border-stone-600 dark:text-stone-100 min-h-[40px]",
             ),
             rx.cond(
                 FeedState.feed_types.length() == 0,
                 rx.el.p(
                     "Add feed types first.",
-                    class_name="text-sm text-stone-500 text-center py-4",
+                    class_name="text-sm text-stone-500 dark:text-stone-400 text-center py-4",
                 ),
                 rx.el.div(
                     rx.el.div(
@@ -590,11 +590,11 @@ def ration_optimizer_panel() -> rx.Component:
                     rx.el.div(
                         rx.el.span(
                             "Est. cost / day",
-                            class_name="text-sm text-stone-500",
+                            class_name="text-sm text-stone-500 dark:text-stone-400",
                         ),
                         rx.el.span(
                             f"₹{FeedState.cheapest_ration['total_cost']:,.0f}",
-                            class_name="text-lg font-extrabold text-stone-800",
+                            class_name="text-lg font-extrabold text-stone-800 dark:text-stone-100",
                         ),
                         class_name="flex items-center justify-between mt-4 pt-3 border-t border-stone-200",
                     ),
@@ -613,10 +613,10 @@ def ration_optimizer_panel() -> rx.Component:
 
 def sim_stat(label: str, value, sub: str) -> rx.Component:
     return rx.el.div(
-        rx.el.p(label, class_name="text-xs text-stone-500"),
-        rx.el.p(value, class_name="text-xl font-extrabold text-stone-800"),
+        rx.el.p(label, class_name="text-xs text-stone-500 dark:text-stone-400"),
+        rx.el.p(value, class_name="text-xl font-extrabold text-stone-800 dark:text-stone-100"),
         rx.el.p(sub, class_name="text-xs text-stone-400"),
-        class_name="bg-stone-50 p-3 rounded-lg",
+        class_name="bg-stone-50 p-3 rounded-lg dark:bg-stone-800",
     )
 
 
@@ -627,7 +627,7 @@ def feed_simulator_panel() -> rx.Component:
         "flask-conical",
         rx.el.div(
             rx.el.label(
-                "Feed", class_name="block text-sm font-medium text-stone-700 mb-1"
+                "Feed", class_name="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-200 dark:text-stone-300"
             ),
             rx.el.select(
                 rx.foreach(
@@ -636,10 +636,10 @@ def feed_simulator_panel() -> rx.Component:
                 ),
                 value=FeedState.sim_feed_type_id,
                 on_change=FeedState.set_sim_feed_type_id,
-                class_name="w-full px-3 py-2 border rounded-md bg-white",
+                class_name="w-full px-3 py-2 border rounded-md bg-white dark:bg-stone-800 dark:border-stone-600 dark:text-stone-100 min-h-[40px]",
             ),
             rx.el.label(
-                "Animal", class_name="block text-sm font-medium text-stone-700 mb-1 mt-4"
+                "Animal", class_name="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-200 mt-4 dark:text-stone-300"
             ),
             rx.el.select(
                 rx.foreach(
@@ -648,11 +648,11 @@ def feed_simulator_panel() -> rx.Component:
                 ),
                 value=FeedState.sim_animal_id,
                 on_change=FeedState.set_sim_animal_id,
-                class_name="w-full px-3 py-2 border rounded-md bg-white",
+                class_name="w-full px-3 py-2 border rounded-md bg-white dark:bg-stone-800 dark:border-stone-600 dark:text-stone-100 min-h-[40px]",
             ),
             rx.el.label(
                 "Change (%)",
-                class_name="block text-sm font-medium text-stone-700 mb-2 mt-4",
+                class_name="block text-sm font-medium text-stone-700 mb-2 mt-4 dark:text-stone-300",
             ),
             rx.el.div(
                 rx.foreach(
@@ -663,7 +663,7 @@ def feed_simulator_panel() -> rx.Component:
                         class_name=rx.cond(
                             FeedState.sim_change_str == v,
                             "px-4 py-2 rounded-lg bg-emerald-500 text-white font-bold text-sm",
-                            "px-4 py-2 rounded-lg bg-stone-100 text-stone-700 font-bold text-sm hover:bg-stone-200 transition-all",
+                            "px-4 py-2 rounded-lg bg-stone-100 text-stone-700 font-bold dark:bg-stone-800 dark:text-stone-200 text-sm hover:bg-stone-200 transition-all",
                         ),
                     ),
                 ),
@@ -676,11 +676,11 @@ def feed_simulator_panel() -> rx.Component:
                         rx.el.div(
                             rx.el.p(
                                 FeedState.simulation_results["feed_name"],
-                                class_name="font-bold text-stone-800",
+                                class_name="font-bold text-stone-800 dark:text-stone-100",
                             ),
                             rx.el.p(
                                 f"{FeedState.simulation_results['current_qty']} → {FeedState.simulation_results['new_qty']} {FeedState.simulation_results['unit']} / day",
-                                class_name="text-xs text-stone-500",
+                                class_name="text-xs text-stone-500 dark:text-stone-400",
                             ),
                             class_name="flex-1",
                         ),
@@ -698,7 +698,7 @@ def feed_simulator_panel() -> rx.Component:
                                 ),
                                 rx.el.span(
                                     "⚖️ Break-even",
-                                    class_name="px-2 py-1 rounded-full bg-stone-100 text-stone-500 text-xs font-bold",
+                                    class_name="px-2 py-1 rounded-full bg-stone-100 text-stone-500 text-xs font-bold dark:bg-stone-800 dark:text-stone-400",
                                 ),
                             ),
                         ),
@@ -726,11 +726,11 @@ def feed_simulator_panel() -> rx.Component:
                         "Rough rule: +1 kg concentrate ≈ +0.8 L milk/day; +1 kg fodder ≈ +0.3 L/day. Estimate only.",
                         class_name="text-xs text-stone-400 mt-3",
                     ),
-                    class_name="mt-5 bg-stone-50 rounded-xl p-4",
+                    class_name="mt-5 bg-stone-50 rounded-xl p-4 dark:bg-stone-800",
                 ),
                 rx.el.p(
                     "Pick a feed to see the estimate.",
-                    class_name="text-sm text-stone-500 text-center py-6",
+                    class_name="text-sm text-stone-500 dark:text-stone-400 text-center py-6",
                 ),
             ),
         ),
@@ -743,10 +743,10 @@ def feed_simulator_panel() -> rx.Component:
 def stat_tile(icon: str, label: str, value, sub: str) -> rx.Component:
     return rx.el.div(
         rx.icon(icon, class_name="h-5 w-5 text-emerald-500"),
-        rx.el.p(label, class_name="text-xs text-stone-500 mt-2"),
-        rx.el.p(value, class_name="text-2xl font-extrabold text-stone-800"),
+        rx.el.p(label, class_name="text-xs text-stone-500 dark:text-stone-400 mt-2"),
+        rx.el.p(value, class_name="text-2xl font-extrabold text-stone-800 dark:text-stone-100"),
         rx.el.p(sub, class_name="text-xs text-stone-400"),
-        class_name="bg-stone-50 p-4 rounded-xl",
+        class_name="bg-stone-50 p-4 rounded-xl dark:bg-stone-800",
     )
 
 
@@ -803,7 +803,7 @@ def feed_trends_panel() -> rx.Component:
             rx.el.div(
                 rx.el.p(
                     "Feed Cost Trend (6 months)",
-                    class_name="text-sm font-semibold text-stone-600 mb-2",
+                    class_name="text-sm font-semibold text-stone-600 dark:text-stone-300 mb-2",
                 ),
                 rx.recharts.area_chart(
                     rx.recharts.cartesian_grid(
@@ -821,12 +821,12 @@ def feed_trends_panel() -> rx.Component:
                     data=FeedState.feed_cost_trend,
                     height=220,
                 ),
-                class_name="bg-stone-50 rounded-xl p-4 mt-4",
+                class_name="bg-stone-50 rounded-xl p-4 dark:bg-stone-800 mt-4 dark:bg-stone-800",
             ),
             rx.el.div(
                 rx.el.p(
                     "Consumption by Feed (30 days)",
-                    class_name="text-sm font-semibold text-stone-600 mb-2 mt-6",
+                    class_name="text-sm font-semibold text-stone-600 dark:text-stone-300 mb-2 mt-6",
                 ),
                 rx.el.div(
                     rx.foreach(
@@ -835,11 +835,11 @@ def feed_trends_panel() -> rx.Component:
                             rx.el.div(
                                 rx.el.span(
                                     item["name"],
-                                    class_name="text-sm font-medium text-stone-700 truncate",
+                                    class_name="text-sm font-medium text-stone-700 truncate dark:text-stone-200",
                                 ),
                                 rx.el.span(
                                     f"{item['qty']} kg · ₹{item['cost']:,.0f}",
-                                    class_name="text-xs text-stone-500",
+                                    class_name="text-xs text-stone-500 dark:text-stone-400",
                                 ),
                                 class_name="flex items-center justify-between mb-1",
                             ),
@@ -855,7 +855,7 @@ def feed_trends_panel() -> rx.Component:
                     ),
                     class_name="mt-2",
                 ),
-                class_name="bg-stone-50 rounded-xl p-4 mt-4",
+                class_name="bg-stone-50 rounded-xl p-4 dark:bg-stone-800 mt-4 dark:bg-stone-800",
             ),
         ),
         "feed-trends",
@@ -868,7 +868,7 @@ def milk_feed_chart() -> rx.Component:
     return rx.el.div(
         rx.el.p(
             "Milk vs Feed per Animal (L/day vs kg/day · 7-day averages)",
-            class_name="text-sm font-semibold text-stone-600 mb-2",
+            class_name="text-sm font-semibold text-stone-600 dark:text-stone-300 mb-2",
         ),
         rx.recharts.bar_chart(
             rx.recharts.cartesian_grid(vertical=False, stroke_dasharray="3 3"),
@@ -877,7 +877,7 @@ def milk_feed_chart() -> rx.Component:
             rx.recharts.y_axis(class_name="text-xs"),
             rx.recharts.bar(
                 data_key="milk",
-                fill="#3b82f6",
+                fill="#10b981",
                 radius=[4, 4, 0, 0],
             ),
             rx.recharts.bar(
@@ -888,15 +888,15 @@ def milk_feed_chart() -> rx.Component:
             data=FeedState.milk_feed_chart_data,
             height=230,
         ),
-        class_name="bg-stone-50 rounded-xl p-4 mb-4",
+        class_name="bg-stone-50 rounded-xl p-4 dark:bg-stone-800 mb-4 dark:bg-stone-800",
     )
 
 
 def insight_card(insight: rx.Var[dict]) -> rx.Component:
     return rx.el.div(
         rx.el.span(insight["icon"], class_name=f"text-xl {insight['color']}"),
-        rx.el.p(insight["text"], class_name="text-sm text-stone-700"),
-        class_name="flex items-start gap-3 bg-stone-50 p-4 rounded-xl",
+        rx.el.p(insight["text"], class_name="text-sm text-stone-700 dark:text-stone-200"),
+        class_name="flex items-start gap-3 bg-stone-50 p-4 rounded-xl dark:bg-stone-800",
     )
 
 
@@ -911,7 +911,7 @@ def milk_feed_panel() -> rx.Component:
             FeedState.milk_feed_insights.length() == 0,
             rx.el.p(
                 "Record milk production and feeding for at least a week to unlock insights.",
-                class_name="text-sm text-stone-500 text-center py-8 bg-stone-50 rounded-xl",
+                class_name="text-sm text-stone-500 dark:text-stone-400 text-center py-8 bg-stone-50 rounded-xl dark:bg-stone-800",
             ),
             rx.el.div(
                 rx.foreach(FeedState.milk_feed_insights, insight_card),
@@ -929,7 +929,7 @@ def efficiency_score_chart() -> rx.Component:
     return rx.el.div(
         rx.el.p(
             "Efficiency Score (0–100)",
-            class_name="text-sm font-semibold text-stone-600 mb-2",
+            class_name="text-sm font-semibold text-stone-600 dark:text-stone-300 mb-2",
         ),
         rx.recharts.bar_chart(
             rx.recharts.cartesian_grid(vertical=False, stroke_dasharray="3 3"),
@@ -944,7 +944,7 @@ def efficiency_score_chart() -> rx.Component:
             data=FeedState.efficiency_chart_data,
             height=200,
         ),
-        class_name="bg-stone-50 rounded-xl p-4 mb-4",
+        class_name="bg-stone-50 rounded-xl p-4 dark:bg-stone-800 mb-4",
     )
 
 
@@ -980,10 +980,10 @@ def efficiency_row(row: rx.Var[dict]) -> rx.Component:
             class_name="w-10 h-10 rounded-full object-cover border border-stone-200",
         ),
         rx.el.div(
-            rx.el.p(row["name"], class_name="font-semibold text-stone-800 text-sm"),
+            rx.el.p(row["name"], class_name="font-semibold text-stone-800 text-sm dark:text-stone-100"),
             rx.el.p(
                 f"{row['milk_per_kg']} L/kg · ₹{row['milk_per_rupee']} milk per ₹ feed",
-                class_name="text-xs text-stone-500",
+                class_name="text-xs text-stone-500 dark:text-stone-400",
             ),
             class_name="flex-1 min-w-0",
         ),
@@ -997,12 +997,12 @@ def efficiency_row(row: rx.Var[dict]) -> rx.Component:
             ),
             rx.el.span(
                 f"{row['score']}",
-                class_name="text-xs font-bold text-stone-700 ml-2",
+                class_name="text-xs font-bold text-stone-700 ml-2 dark:text-stone-200",
             ),
             class_name="flex items-center gap-2",
         ),
         rank_badge(row["rank"]),
-        class_name="flex items-center gap-3 p-3 rounded-xl bg-stone-50",
+        class_name="flex items-center gap-3 p-3 rounded-xl bg-stone-50 dark:bg-stone-800",
     )
 
 
@@ -1017,7 +1017,7 @@ def efficiency_panel() -> rx.Component:
             FeedState.efficiency_ranks.length() == 0,
             rx.el.p(
                 "Efficiency ranking needs both feeding and milk records.",
-                class_name="text-sm text-stone-500 text-center py-8 bg-stone-50 rounded-xl",
+                class_name="text-sm text-stone-500 dark:text-stone-400 text-center py-8 bg-stone-50 rounded-xl dark:bg-stone-800",
             ),
             rx.el.div(
                 rx.foreach(FeedState.efficiency_ranks, efficiency_row),
@@ -1034,12 +1034,12 @@ def efficiency_panel() -> rx.Component:
 def suggestion_card(s: rx.Var[dict]) -> rx.Component:
     return rx.el.div(
         rx.icon("shopping-cart", class_name="h-5 w-5 text-blue-500"),
-        rx.el.p(s["text"], class_name="text-sm text-stone-700 flex-1"),
+        rx.el.p(s["text"], class_name="text-sm text-stone-700 flex-1 dark:text-stone-200"),
         rx.el.span(
             f"Buy {s['buy_qty']} {s['unit']}",
             class_name="text-xs font-bold px-3 py-1 rounded-full bg-blue-50 text-blue-600 flex-shrink-0",
         ),
-        class_name="flex items-center gap-3 bg-stone-50 p-4 rounded-xl",
+        class_name="flex items-center gap-3 bg-stone-50 p-4 rounded-xl dark:bg-stone-800",
     )
 
 
@@ -1052,7 +1052,7 @@ def purchase_planner_panel() -> rx.Component:
             FeedState.purchase_suggestions.length() == 0,
             rx.el.p(
                 "Record a few days of feeding to get purchase suggestions.",
-                class_name="text-sm text-stone-500 text-center py-8 bg-stone-50 rounded-xl",
+                class_name="text-sm text-stone-500 dark:text-stone-400 text-center py-8 bg-stone-50 rounded-xl dark:bg-stone-800",
             ),
             rx.el.div(
                 rx.foreach(FeedState.purchase_suggestions, suggestion_card),
@@ -1072,11 +1072,11 @@ def alert_card(alert: rx.Var[dict]) -> rx.Component:
             class_name=f"w-10 h-10 rounded-xl flex items-center justify-center {alert['color']}",
         ),
         rx.el.div(
-            rx.el.p(alert["title"], class_name="font-semibold text-stone-800 text-sm"),
-            rx.el.p(alert["text"], class_name="text-xs text-stone-500"),
+            rx.el.p(alert["title"], class_name="font-semibold text-stone-800 text-sm dark:text-stone-100"),
+            rx.el.p(alert["text"], class_name="text-xs text-stone-500 dark:text-stone-400"),
             class_name="flex-1",
         ),
-        class_name="flex items-center gap-3 bg-stone-50 p-4 rounded-xl",
+        class_name="flex items-center gap-3 bg-stone-50 p-4 rounded-xl dark:bg-stone-800",
     )
 
 
@@ -1091,9 +1091,9 @@ def smart_alerts_panel() -> rx.Component:
                 rx.icon("shield-check", class_name="h-8 w-8 text-emerald-400 mx-auto"),
                 rx.el.p(
                     "All clear! No feed alerts right now.",
-                    class_name="text-sm text-stone-500 text-center mt-2",
+                    class_name="text-sm text-stone-500 dark:text-stone-400 text-center mt-2 dark:text-stone-400",
                 ),
-                class_name="py-8 bg-stone-50 rounded-xl",
+                class_name="py-8 bg-stone-50 rounded-xl dark:bg-stone-800",
             ),
             rx.el.div(
                 rx.foreach(FeedState.smart_alerts, alert_card),
@@ -1113,8 +1113,8 @@ def advisor_card(rec: rx.Var[dict]) -> rx.Component:
             rx.el.p(rec["title"], class_name="font-bold text-sm"),
             class_name=f"flex items-center gap-2 px-4 py-3 rounded-t-xl border-b {rec['color']}",
         ),
-        rx.el.p(rec["action"], class_name="text-sm text-stone-700 p-4"),
-        class_name="bg-white rounded-xl border border-stone-200 overflow-hidden",
+        rx.el.p(rec["action"], class_name="text-sm text-stone-700 p-4 dark:text-stone-300"),
+        class_name="bg-white rounded-xl border border-stone-200 overflow-hidden dark:bg-stone-800 dark:border-stone-700",
     )
 
 
@@ -1127,7 +1127,7 @@ def feed_advisor_panel() -> rx.Component:
             FeedState.ai_recommendations.length() == 0,
             rx.el.p(
                 "Record milk and feeding for a few days and the advisor will suggest improvements.",
-                class_name="text-sm text-stone-500 text-center py-8 bg-stone-50 rounded-xl",
+                class_name="text-sm text-stone-500 dark:text-stone-400 text-center py-8 bg-stone-50 rounded-xl dark:bg-stone-800",
             ),
             rx.el.div(
                 rx.foreach(FeedState.ai_recommendations, advisor_card),
@@ -1152,15 +1152,15 @@ REPORTS = [
 
 def report_card(report: rx.Var[dict]) -> rx.Component:
     return rx.el.div(
-        rx.el.p(report[1], class_name="font-bold text-stone-800"),
-        rx.el.p(report[2], class_name="text-xs text-stone-500 mt-1"),
+        rx.el.p(report[1], class_name="font-bold text-stone-800 dark:text-stone-100"),
+        rx.el.p(report[2], class_name="text-xs text-stone-500 dark:text-stone-400 mt-1"),
         rx.el.button(
             rx.icon("download", class_name="h-4 w-4 mr-1"),
             "PDF",
             on_click=lambda: FeedState.generate_feed_report(report[0]),
             class_name="mt-3 flex items-center text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600",
         ),
-        class_name="bg-stone-50 p-4 rounded-xl border border-stone-100",
+        class_name="bg-stone-50 p-4 rounded-xl dark:bg-stone-800 border border-stone-100 dark:bg-stone-800 dark:border-stone-700",
     )
 
 

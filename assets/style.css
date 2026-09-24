@@ -1,17 +1,188 @@
 :root {
     --color-cream-100: #faf8f5;
     --color-cream-50: #fdfcfb;
+    --al-bg: #faf8f5;
+    --al-surface: #ffffff;
+    --al-text: #1c1917;
+}
+
+html.dark {
+    --al-bg: #0c0a09;
+    --al-surface: #1c1917;
+    --al-text: #e7e5e4;
+    color-scheme: dark;
 }
 
 body, html, #root {
-    background-color: #faf8f5 !important;
-    color: #1c1917;
+    background-color: var(--al-bg) !important;
+    color: var(--al-text);
 }
 
 .bg-cream-100 {
-    background-color: #faf8f5 !important;
+    background-color: var(--al-bg) !important;
 }
 
 aside {
-    background-color: #faf8f5 !important;
+    background-color: var(--al-bg) !important;
+}
+
+/* ── Motion system ─────────────────────────────────────────────── */
+
+@keyframes al-modal-in {
+    0% { opacity: 0; transform: scale(0.95) translateY(8px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes al-fade-up {
+    0% { opacity: 0; transform: translateY(16px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes al-shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+}
+
+@keyframes al-pulse-ring {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45); }
+    70% { box-shadow: 0 0 0 12px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+@keyframes al-grow-x {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+}
+
+@keyframes al-fill-bar {
+    from { width: 0; }
+}
+
+@keyframes al-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.al-modal-in { animation: al-modal-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.al-fade-in { animation: al-fade-in 0.2s ease-out both; }
+.al-fade-up { animation: al-fade-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.al-shake { animation: al-shake 0.4s ease-in-out; }
+.al-pulse-once { animation: al-pulse-ring 1.2s ease-out 2; }
+.al-grow-x { transform-origin: left; animation: al-grow-x 0.45s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.al-fill-bar { animation: al-fill-bar 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+/* Landing scroll-reveal (activated by reveal.js) */
+.reveal-on-scroll {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal-on-scroll.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Respect reduced-motion preferences across the whole app */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+    .reveal-on-scroll {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* ── Dark mode (class on <html>) ───────────────────────────────── */
+/* Utility-level overrides so every page darkens without a full rewrite. */
+
+.dark body, .dark html, .dark #root {
+    background-color: #0c0a09 !important;
+    color: #e7e5e4;
+}
+
+.dark .bg-white { background-color: #1c1917 !important; }
+.dark .bg-stone-50 { background-color: #0c0a09 !important; }
+.dark .bg-stone-100 { background-color: #292524 !important; }
+.dark .bg-stone-200 { background-color: #44403c !important; }
+.dark aside, .dark .bg-cream-100, .dark .bg-\[\#faf8f5\] {
+    background-color: #0c0a09 !important;
+}
+
+.dark .text-stone-800, .dark .text-stone-700 { color: #e7e5e4 !important; }
+.dark .text-stone-600 { color: #d6d3d1 !important; }
+.dark .text-stone-500 { color: #a8a29e !important; }
+.dark .text-stone-400 { color: #78716c !important; }
+
+.dark .border-stone-100, .dark .border-stone-200, .dark .border {
+    border-color: #292524 !important;
+}
+
+.dark .hover\:bg-stone-50:hover { background-color: #292524 !important; }
+.dark .hover\:bg-stone-100:hover { background-color: #292524 !important; }
+.dark .hover\:bg-stone-200:hover { background-color: #44403c !important; }
+.dark .hover\:bg-stone-50:hover { background-color: #292524 !important; }
+
+.dark .bg-emerald-50 { background-color: #052e22 !important; }
+.dark .hover\:bg-emerald-50:hover { background-color: #052e22 !important; }
+
+.dark input, .dark select, .dark textarea {
+    background-color: #292524;
+    border-color: #44403c;
+    color: #e7e5e4;
+}
+.dark input::placeholder, .dark textarea::placeholder { color: #78716c; }
+.dark input:disabled, .dark select:disabled {
+    background-color: #1c1917;
+    color: #78716c;
+}
+
+.dark .ag-theme-quartz, .dark .ag-theme-alpine {
+    --ag-foreground-color: #e7e5e4;
+    --ag-data-color: #e7e5e4;
+    --ag-background-color: #1c1917;
+    --ag-header-background-color: #292524;
+    --ag-header-foreground-color: #e7e5e4;
+    --ag-header-column-hover-background-color: #44403c;
+    --ag-border-color: #44403c;
+    --ag-secondary-border-color: #44403c;
+    --ag-row-hover-color: #052e22;
+    --ag-selected-row-background-color: #064e3b;
+    --ag-odd-row-background-color: #171412;
+}
+
+/* ── AG Grid theme (moved out of app.py head) ──────────────────── */
+.ag-theme-quartz, .ag-theme-alpine {
+    --ag-font-family: "Lato", ui-sans-serif, system-ui, sans-serif;
+    --ag-font-size: 14px;
+    --ag-foreground-color: #44403c;
+    --ag-data-color: #44403c;
+    --ag-background-color: #ffffff;
+    --ag-header-background-color: #f5f5f4;
+    --ag-header-foreground-color: #44403c;
+    --ag-header-column-hover-background-color: #e7e5e4;
+    --ag-border-color: #e7e5e4;
+    --ag-secondary-border-color: #e7e5e4;
+    --ag-row-hover-color: #f0fdf4;
+    --ag-selected-row-background-color: #d1fae5;
+    --ag-odd-row-background-color: #fafaf9;
+    --ag-border-radius: 8px;
+    --ag-wrapper-border-radius: 10px;
+    border-radius: 10px;
+    overflow: hidden;
+}
+.ag-theme-quartz .ag-header-cell,
+.ag-theme-alpine .ag-header-cell {
+    font-weight: 600;
+}
+.ag-theme-quartz .ag-root-wrapper,
+.ag-theme-alpine .ag-root-wrapper {
+    border-radius: 10px;
+    overflow: hidden;
 }

@@ -1,11 +1,11 @@
 (function() {
+    // Restore the user's saved theme (default: light). Never force one.
     try {
-        localStorage.setItem('theme', 'light');
-        if (document.documentElement) {
-            document.documentElement.classList.remove('dark');
-            document.documentElement.classList.add('light');
-            document.documentElement.style.colorScheme = 'light';
-        }
+        var stored = localStorage.getItem('theme') || 'light';
+        var root = document.documentElement;
+        root.classList.toggle('dark', stored === 'dark');
+        root.classList.toggle('light', stored !== 'dark');
+        root.style.colorScheme = stored;
     } catch(e) {}
 
     if (typeof window !== 'undefined' && window.ResizeObserver) {

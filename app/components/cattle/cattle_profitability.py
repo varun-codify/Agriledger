@@ -1,4 +1,4 @@
-"""Cattle profitability per animal — displays pre-computed profit data."""
+﻿"""Cattle profitability per animal — displays pre-computed profit data."""
 
 import reflex as rx
 
@@ -14,26 +14,26 @@ def profitability_card(item: rx.Var[dict]) -> rx.Component:
                 class_name="w-10 h-10 rounded-full object-cover",
             ),
             rx.el.div(
-                rx.el.p(item["name"], class_name="font-semibold text-stone-800 text-sm"),
-                rx.el.p(item["animal_type"], class_name="text-xs text-stone-500 capitalize"),
+                rx.el.p(item["name"], class_name="font-semibold text-stone-800 text-sm dark:text-stone-100"),
+                rx.el.p(item["animal_type"], class_name="text-xs text-stone-500 dark:text-stone-400 capitalize"),
             ),
             class_name="flex items-center gap-3",
         ),
         rx.el.div(
             rx.el.div(
-                rx.el.p("Milk (L)", class_name="text-xs text-stone-500"),
-                rx.el.p(item["total_milk"], class_name="text-sm font-bold text-stone-800"),
+                rx.el.p("Milk (L)", class_name="text-xs text-stone-500 dark:text-stone-400"),
+                rx.el.p(item["total_milk"], class_name="text-sm font-bold text-stone-800 dark:text-stone-100"),
             ),
             rx.el.div(
-                rx.el.p("Revenue", class_name="text-xs text-stone-500"),
+                rx.el.p("Revenue", class_name="text-xs text-stone-500 dark:text-stone-400"),
                 rx.el.p(item["revenue"], class_name="text-sm font-bold text-emerald-600"),
             ),
             rx.el.div(
-                rx.el.p("Cost", class_name="text-xs text-stone-500"),
+                rx.el.p("Cost", class_name="text-xs text-stone-500 dark:text-stone-400"),
                 rx.el.p(item["cost"], class_name="text-sm font-bold text-red-500"),
             ),
             rx.el.div(
-                rx.el.p("Profit", class_name="text-xs text-stone-500"),
+                rx.el.p("Profit", class_name="text-xs text-stone-500 dark:text-stone-400"),
                 rx.el.p(
                     item["profit"],
                     class_name=rx.cond(
@@ -45,7 +45,7 @@ def profitability_card(item: rx.Var[dict]) -> rx.Component:
             ),
             class_name="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-3",
         ),
-        class_name="bg-white p-4 rounded-xl shadow-sm border border-stone-100",
+        class_name="bg-white p-4 rounded-xl shadow-sm border border-stone-100 dark:bg-stone-900 dark:border-stone-700",
     )
 
 
@@ -54,7 +54,7 @@ def cattle_profitability_section() -> rx.Component:
     return rx.el.div(
         rx.el.h3(
             "Animal Profitability",
-            class_name="text-lg font-semibold text-stone-800 mb-4",
+            class_name="text-lg font-semibold text-stone-800 mb-4 dark:text-stone-100",
         ),
         rx.el.div(
             rx.foreach(
@@ -63,5 +63,5 @@ def cattle_profitability_section() -> rx.Component:
             ),
             class_name="space-y-3",
         ),
-        class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100",
+        class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 dark:bg-stone-900 dark:border-stone-700",
     )

@@ -94,7 +94,10 @@ class FamilyState(rx.State):
             "status": "active",
             "added_date": datetime.date.today().isoformat(),
         }
-        linked_user = await crud.get_user_by_email(email)
+        try:
+            linked_user = await crud.get_user_by_email(email)
+        except Exception:
+            linked_user = None
         if linked_user:
             # Already registered: point their account at this farm so they
             # see the same data after their next login.
@@ -126,7 +129,10 @@ class FamilyState(rx.State):
             return
         # If the member has an account, move it to a fresh farm so they can
         # no longer see this farm's data (their old records stay here).
-        linked_user = await crud.get_user_by_email(member["email"])
+        try:
+            linked_user = await crud.get_user_by_email(member["email"])
+        except Exception:
+            linked_user = None
         if linked_user:
             await crud.update_user_farm_id(member["email"], str(uuid.uuid4()))
         await crud.delete_family_member(auth.farm_id, member_id)

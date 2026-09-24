@@ -1,4 +1,4 @@
-import reflex as rx
+﻿import reflex as rx
 
 from app.states.transaction_state import TransactionState
 
@@ -6,11 +6,11 @@ from app.states.transaction_state import TransactionState
 def review_item(label: str, value: rx.Var, icon: str) -> rx.Component:
     return rx.el.div(
         rx.el.div(
-            rx.icon(icon, class_name="h-5 w-5 text-stone-500"),
-            rx.el.p(label, class_name="font-medium text-stone-600"),
+            rx.icon(icon, class_name="h-5 w-5 text-stone-500 dark:text-stone-400"),
+            rx.el.p(label, class_name="font-medium text-stone-600 dark:text-stone-300"),
             class_name="flex items-center gap-3",
         ),
-        rx.el.p(value, class_name="font-semibold text-stone-800 text-right"),
+        rx.el.p(value, class_name="font-semibold text-stone-800 text-right dark:text-stone-100"),
         class_name="flex items-center justify-between py-3 border-b border-stone-100",
     )
 
@@ -20,7 +20,7 @@ def step_6_review() -> rx.Component:
     return rx.el.div(
         rx.el.h2(
             "Review Your Transaction",
-            class_name="text-2xl font-bold text-stone-800 text-center mb-6",
+            class_name="text-2xl font-bold text-stone-800 text-center mb-6 dark:text-stone-100",
         ),
         rx.el.div(
             review_item("Type", TransactionState.transaction_type.capitalize(), "tag"),

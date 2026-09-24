@@ -1,4 +1,4 @@
-"""Milk & Society Bills page.
+﻿"""Milk & Society Bills page.
 
 Records milk deliveries from the society's bill slip (Aavin, Hatsun, etc.),
 with optional OCR scanning so the farmer spends seconds on data entry.
@@ -6,6 +6,7 @@ with optional OCR scanning so the farmer spends seconds on data entry.
 
 import reflex as rx
 
+from app.components.common import BTN_PRIMARY, BTN_SECONDARY, INPUT_BASE, empty_state, segmented_control
 from app.components.layout import dashboard_layout
 from app.states.cattle_state import CattleState
 from app.states.milk_state import MilkState
@@ -19,10 +20,10 @@ def stat_card(
             rx.icon(icon, class_name="h-5 w-5"),
             class_name=f"p-3 rounded-xl {color}",
         ),
-        rx.el.p(title, class_name="text-xs text-stone-500 mt-3"),
-        rx.el.p(value, class_name="text-2xl font-bold text-stone-800"),
-        rx.el.p(sub, class_name="text-xs text-stone-400"),
-        class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100",
+        rx.el.p(title, class_name="text-xs text-stone-500 dark:text-stone-400 mt-3"),
+        rx.el.p(value, class_name="text-2xl font-bold text-stone-800 dark:text-stone-100"),
+        rx.el.p(sub, class_name="text-xs text-stone-400 dark:text-stone-500"),
+        class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 dark:bg-stone-900 dark:border-stone-700",
     )
 
 
@@ -68,16 +69,46 @@ def summary_cards() -> rx.Component:
 
 
 def scan_card() -> rx.Component:
-    """OCR dropzone for the society bill photo."""
+    """OCR dropzone + camera capture for the society bill photo."""
+    open_camera_js = """
+        const input = document.querySelector('#milk-bill-upload input[type="file"]');
+        if (input) {
+            input.setAttribute('capture', 'environment');
+            input.setAttribute('accept', 'image/*');
+            const cleanup = () => {
+                input.removeAttribute('capture');
+                input.removeEventListener('change', cleanup);
+                input.removeEventListener('cancel', cleanup);
+            };
+            input.addEventListener('change', cleanup);
+            input.addEventListener('cancel', cleanup);
+            input.click();
+        }
+    """
     return rx.el.div(
         rx.el.h3(
             "📷 Scan Society Bill",
-            class_name="text-lg font-semibold text-stone-800 mb-1",
+            class_name="text-lg font-semibold text-stone-800 mb-1 dark:text-stone-100",
         ),
         rx.el.p(
             "Take a photo of the Aavin / Hatsun bill slip — fat %, SNF %, "
             "litres, rate and amount are filled in for you.",
-            class_name="text-sm text-stone-500 mb-4",
+            class_name="text-sm text-stone-500 dark:text-stone-400 mb-4",
+        ),
+        rx.el.div(
+            rx.el.button(
+                rx.icon("camera", class_name="h-4 w-4 mr-2"),
+                "Take Photo",
+                on_click=rx.call_script(open_camera_js),
+                disabled=MilkState.scanning,
+                type="button",
+                class_name=f"flex items-center justify-center px-4 py-2.5 min-h-[40px] {BTN_PRIMARY}",
+            ),
+            rx.el.span(
+                "or upload a file below",
+                class_name="text-xs text-stone-400 dark:text-stone-500",
+            ),
+            class_name="flex items-center gap-3 mb-3 flex-wrap",
         ),
         rx.upload(
             rx.el.div(
@@ -90,7 +121,7 @@ def scan_card() -> rx.Component:
                         ),
                         rx.el.p(
                             "Reading the bill…",
-                            class_name="text-sm font-medium text-stone-600 mt-2",
+                            class_name="text-sm font-medium text-stone-600 mt-2 dark:text-stone-300",
                         ),
                         class_name="text-center",
                     ),
@@ -101,12 +132,12 @@ def scan_card() -> rx.Component:
                         ),
                         rx.el.p(
                             "Click to select or drag the bill photo here",
-                            class_name="text-sm font-medium text-stone-600 mt-2",
+                            class_name="text-sm font-medium text-stone-600 mt-2 dark:text-stone-300",
                         ),
                         rx.el.p(
                             "JPG / PNG — the image never leaves your device's "
                             "internet connection except to Gemini",
-                            class_name="text-xs text-stone-400 mt-1",
+                            class_name="text-xs text-stone-400 mt-1 dark:text-stone-500",
                         ),
                         class_name="text-center",
                     ),
@@ -134,7 +165,7 @@ def scan_card() -> rx.Component:
             ),
             None,
         ),
-        class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100",
+        class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 dark:bg-stone-900 dark:border-stone-700",
     )
 
 
@@ -148,19 +179,19 @@ def form_field(
 ) -> rx.Component:
     return rx.el.div(
         rx.el.label(
-            label, class_name="block text-sm font-medium text-stone-700 mb-1"
+            label, class_name="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300"
         ),
         rx.el.input(
             type=input_type,
             value=value,
             on_change=on_change,
             placeholder=placeholder,
-            class_name="w-full px-3 py-2 rounded-lg border border-stone-300 "
-            "focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition",
+            class_name=INPUT_BASE,
+            min_height="40px",
         ),
         rx.cond(
             hint != "",
-            rx.el.p(hint, class_name="text-xs text-stone-400 mt-0.5"),
+            rx.el.p(hint, class_name="text-xs text-stone-400 mt-0.5 dark:text-stone-500"),
             None,
         ),
     )
@@ -171,14 +202,14 @@ def milk_entry_form() -> rx.Component:
     return rx.el.div(
         rx.el.h3(
             "Enter Bill Slip",
-            class_name="text-lg font-semibold text-stone-800 mb-4",
+            class_name="text-lg font-semibold text-stone-800 mb-4 dark:text-stone-100",
         ),
         rx.el.div(
             # Society + date
             rx.el.div(
                 rx.el.label(
                     "Milk Society",
-                    class_name="block text-sm font-medium text-stone-700 mb-1",
+                    class_name="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300",
                 ),
                 rx.el.select(
                     rx.foreach(
@@ -187,8 +218,8 @@ def milk_entry_form() -> rx.Component:
                     ),
                     value=MilkState.society,
                     on_change=MilkState.set_society,
-                    class_name="w-full px-3 py-2 rounded-lg border border-stone-300 "
-                    "focus:ring-2 focus:ring-emerald-500 transition",
+                    class_name=INPUT_BASE,
+                    min_height="40px",
                 ),
             ),
             form_field("Date", MilkState.date, MilkState.set_date, "date"),
@@ -283,21 +314,21 @@ def milk_entry_form() -> rx.Component:
         rx.el.div(
             rx.el.label(
                 "Payment Status",
-                class_name="block text-sm font-medium text-stone-700 mb-1",
+                class_name="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300",
             ),
             rx.el.select(
                 rx.el.option("Pending (not paid yet)", value="pending"),
                 rx.el.option("Paid", value="paid"),
                 value=MilkState.payment_status,
                 on_change=MilkState.set_payment_status,
-                class_name="w-full px-3 py-2 rounded-lg border border-stone-300 "
-                "focus:ring-2 focus:ring-emerald-500 transition",
+                class_name=INPUT_BASE,
+                min_height="40px",
             ),
         ),
         rx.el.div(
             rx.el.label(
                 "Animal (optional)",
-                class_name="block text-sm font-medium text-stone-700 mb-1",
+                class_name="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300",
             ),
             rx.el.select(
                 rx.el.option("— No animal —", value=""),
@@ -307,8 +338,8 @@ def milk_entry_form() -> rx.Component:
                 ),
                 value=MilkState.animal_id,
                 on_change=MilkState.set_animal_id,
-                class_name="w-full px-3 py-2 rounded-lg border border-stone-300 "
-                "focus:ring-2 focus:ring-emerald-500 transition",
+                class_name=INPUT_BASE,
+                min_height="40px",
             ),
         ),
         form_field(
@@ -323,18 +354,16 @@ def milk_entry_form() -> rx.Component:
                 rx.icon("check", class_name="h-4 w-4 mr-2"),
                 "Save Bill",
                 on_click=MilkState.add_bill,
-                class_name="flex items-center px-5 py-2.5 rounded-lg bg-emerald-600 "
-                "text-white font-semibold hover:bg-emerald-700 transition shadow-sm",
+                class_name=f"flex items-center min-h-[40px] px-5 py-2.5 {BTN_PRIMARY}",
             ),
             rx.el.button(
                 "Clear",
                 on_click=MilkState.reset_form,
-                class_name="px-5 py-2.5 rounded-lg bg-stone-100 text-stone-600 "
-                "font-semibold hover:bg-stone-200 transition",
+                class_name=f"px-5 py-2.5 min-h-[40px] {BTN_SECONDARY}",
             ),
             class_name="flex gap-3 mt-4",
         ),
-        class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100",
+        class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 dark:bg-stone-900 dark:border-stone-700",
     )
 
 
@@ -343,13 +372,13 @@ def rate_checker() -> rx.Component:
     return rx.el.div(
         rx.el.h3(
             "Rate Checker",
-            class_name="text-lg font-semibold text-stone-800 mb-1",
+            class_name="text-lg font-semibold text-stone-800 mb-1 dark:text-stone-100",
         ),
         rx.el.p(
             "Societies price milk by fat %. Add the slab rates from your "
             "society's rate card — the entry form then suggests the rate for "
             "each fat reading and flags bill mismatches.",
-            class_name="text-sm text-stone-500 mb-4",
+            class_name="text-sm text-stone-500 dark:text-stone-400 mb-4",
         ),
         rx.el.div(
             rx.el.select(
@@ -360,23 +389,22 @@ def rate_checker() -> rx.Component:
                 value=MilkState.rate_society,
                 on_change=MilkState.set_rate_society,
                 class_name="w-full px-3 py-2 rounded-lg border border-stone-300 "
-                "focus:ring-2 focus:ring-emerald-500 transition",
+                "focus:ring-2 focus:ring-emerald-500 transition dark:bg-stone-800 dark:border-stone-600 dark:text-stone-100 min-h-[40px]",
             ),
             rx.el.button(
                 "Load",
                 on_click=MilkState.load_rate_table,
-                class_name="px-4 py-2 rounded-lg bg-stone-100 text-stone-600 "
-                "text-sm font-semibold hover:bg-stone-200 transition",
+                class_name=f"px-4 py-2 min-h-[40px] text-sm {BTN_SECONDARY}",
             ),
             class_name="flex gap-2",
         ),
         rx.el.div(
             rx.el.div(
                 rx.el.span(
-                    "Fat % at least", class_name="text-xs text-stone-500 flex-1"
+                    "Fat % at least", class_name="text-xs text-stone-500 dark:text-stone-400 flex-1"
                 ),
                 rx.el.span(
-                    "Rate (₹/L)", class_name="text-xs text-stone-500 w-24 text-right"
+                    "Rate (₹/L)", class_name="text-xs text-stone-500 dark:text-stone-400 w-24 text-right"
                 ),
                 class_name="flex gap-2 px-1 mb-1",
             ),
@@ -384,7 +412,7 @@ def rate_checker() -> rx.Component:
                 MilkState.rate_slabs.length() == 0,
                 rx.el.p(
                     "No slabs yet. Add the society's rate card below.",
-                    class_name="text-xs text-stone-400 py-2",
+                    class_name="text-xs text-stone-400 py-2 dark:text-stone-500",
                 ),
                 rx.el.div(
                     rx.foreach(
@@ -407,7 +435,7 @@ def rate_checker() -> rx.Component:
                             rx.el.button(
                                 rx.icon("trash-2", class_name="h-4 w-4"),
                                 on_click=lambda: MilkState.remove_slab(i),
-                                class_name="p-2 rounded-md text-red-500 hover:bg-red-50 transition",
+                                class_name="p-2 min-h-[32px] min-w-[32px] rounded-md text-red-500 hover:bg-red-50 transition dark:hover:bg-red-950/40",
                             ),
                             class_name="flex items-center gap-2 mb-2",
                         ),
@@ -419,16 +447,15 @@ def rate_checker() -> rx.Component:
                 rx.icon("plus", class_name="h-4 w-4 mr-1"),
                 "Add Slab",
                 on_click=MilkState.add_slab,
-                class_name="flex items-center px-3 py-1.5 rounded-md bg-stone-100 "
-                "text-stone-600 text-sm font-semibold hover:bg-stone-200 transition",
+                class_name="flex items-center px-3 py-1.5 min-h-[32px] rounded-md bg-stone-100 "
+                "text-stone-600 text-sm font-semibold hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700 transition",
             ),
             class_name="mt-4",
         ),
         rx.el.button(
             "Save Rate Table",
             on_click=MilkState.save_rate_table,
-            class_name="w-full mt-4 px-4 py-2.5 rounded-lg bg-emerald-600 text-white "
-            "font-semibold hover:bg-emerald-700 transition",
+            class_name=f"w-full mt-4 px-4 py-2.5 min-h-[40px] {BTN_PRIMARY}",
         ),
         rx.cond(
             MilkState.rate_saved,
@@ -437,7 +464,7 @@ def rate_checker() -> rx.Component:
             ),
             None,
         ),
-        class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 h-full",
+        class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 h-full dark:bg-stone-900 dark:border-stone-700",
     )
 
 
@@ -447,10 +474,10 @@ def society_performance() -> rx.Component:
         rx.el.div(
             rx.el.h2(
                 "Society Performance",
-                class_name="text-lg font-semibold text-stone-800",
+                class_name="text-lg font-semibold text-stone-800 dark:text-stone-100",
             ),
             rx.el.p(
-                "This month", class_name="text-sm text-stone-400"
+                "This month", class_name="text-sm text-stone-400 dark:text-stone-500"
             ),
             class_name="flex items-end justify-between mb-4",
         ),
@@ -459,8 +486,7 @@ def society_performance() -> rx.Component:
             rx.el.p(
                 "No bills recorded this month yet. Save your first society bill "
                 "above to see the comparison.",
-                class_name="text-sm text-stone-400 bg-white border border-stone-100 "
-                "rounded-2xl p-6",
+                class_name="text-sm text-stone-400 bg-white border border-stone-100 rounded-2xl p-6 dark:bg-stone-900 dark:border-stone-700 dark:text-stone-400",
             ),
             rx.el.div(
                 rx.foreach(
@@ -469,39 +495,40 @@ def society_performance() -> rx.Component:
                         rx.el.div(
                             rx.icon("landmark", class_name="h-5 w-5 text-emerald-600"),
                             rx.el.p(
-                                s["society"], class_name="font-semibold text-stone-800"
+                                s["society"],
+                                class_name="font-semibold text-stone-800 dark:text-stone-100",
                             ),
                             rx.el.span(
                                 s["bills"].to_string() + " bills",
                                 class_name="text-xs px-2 py-0.5 rounded-full bg-stone-100 "
-                                "text-stone-500",
+                                "text-stone-500 dark:bg-stone-700 dark:text-stone-300",
                             ),
                             class_name="flex items-center gap-2",
                         ),
                         rx.el.div(
                             rx.el.div(
-                                rx.el.p("Litres", class_name="text-xs text-stone-400"),
+                                rx.el.p("Litres", class_name="text-xs text-stone-400 dark:text-stone-500"),
                                 rx.el.p(
                                     s["litres"].to_string(),
-                                    class_name="text-xl font-bold text-stone-800",
+                                    class_name="text-xl font-bold text-stone-800 dark:text-stone-100",
                                 ),
                             ),
                             rx.el.div(
-                                rx.el.p("Income", class_name="text-xs text-stone-400"),
+                                rx.el.p("Income", class_name="text-xs text-stone-400 dark:text-stone-500"),
                                 rx.el.p(
                                     "₹" + s["income"].to_string(),
                                     class_name="text-xl font-bold text-emerald-600",
                                 ),
                             ),
                             rx.el.div(
-                                rx.el.p("Avg Fat / SNF", class_name="text-xs text-stone-400"),
+                                rx.el.p("Avg Fat / SNF", class_name="text-xs text-stone-400 dark:text-stone-500"),
                                 rx.el.p(
                                     s["avg_fat"].to_string() + " / " + s["avg_snf"].to_string(),
-                                    class_name="text-xl font-bold text-stone-800",
+                                    class_name="text-xl font-bold text-stone-800 dark:text-stone-100",
                                 ),
                             ),
                             rx.el.div(
-                                rx.el.p("Pending", class_name="text-xs text-stone-400"),
+                                rx.el.p("Pending", class_name="text-xs text-stone-400 dark:text-stone-500"),
                                 rx.el.p(
                                     "₹" + s["pending"].to_string(),
                                     class_name="text-xl font-bold text-amber-600",
@@ -509,7 +536,7 @@ def society_performance() -> rx.Component:
                             ),
                             class_name="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4",
                         ),
-                        class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100",
+                        class_name="bg-white p-5 rounded-2xl shadow-sm border border-stone-100 dark:bg-stone-900 dark:border-stone-700",
                     ),
                 ),
                 class_name="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6",
@@ -523,14 +550,15 @@ def bills_table() -> rx.Component:
     """History of recorded society bills with paid/pending + delete."""
     return rx.el.div(
         rx.el.h2(
-            "Bill History", class_name="text-lg font-semibold text-stone-800 mb-4"
+            "Bill History",
+            class_name="text-lg font-semibold text-stone-800 mb-4 dark:text-stone-100",
         ),
         rx.cond(
             MilkState.milk_sales.length() == 0,
-            rx.el.p(
+            empty_state(
+                "receipt-text",
                 "No milk bills recorded yet.",
-                class_name="text-sm text-stone-400 bg-white border border-stone-100 "
-                "rounded-2xl p-6",
+                "Record your first society delivery to see it here.",
             ),
             rx.el.div(
                 rx.foreach(
@@ -538,30 +566,31 @@ def bills_table() -> rx.Component:
                     lambda s: rx.el.div(
                         rx.el.div(
                             rx.el.p(
-                                s["date"], class_name="text-sm font-semibold text-stone-800"
+                                s["date"],
+                                class_name="text-sm font-semibold text-stone-800 dark:text-stone-100",
                             ),
                             rx.el.p(
                                 rx.cond(s.get("bill_number", ""), s.get("bill_number", ""), "—"),
-                                class_name="text-xs text-stone-400",
+                                class_name="text-xs text-stone-400 dark:text-stone-500",
                             ),
                         ),
                         rx.el.div(
-                            rx.icon("landmark", class_name="h-4 w-4 text-stone-400"),
+                            rx.icon("landmark", class_name="h-4 w-4 text-stone-400 dark:text-stone-500"),
                             rx.el.span(
                                 s.get("buyer", "—"),
-                                class_name="text-sm font-medium text-stone-700",
+                                class_name="text-sm font-medium text-stone-700 dark:text-stone-300",
                             ),
                             class_name="flex items-center gap-2",
                         ),
                         rx.el.div(
                             rx.el.p(
                                 s["liters"].to_string() + " L",
-                                class_name="text-sm font-bold text-stone-800",
+                                class_name="text-sm font-bold text-stone-800 dark:text-stone-100",
                             ),
                             rx.el.p(
                                 "Fat " + s["fat_percentage"].to_string() + "% · SNF "
                                 + s["snf_percentage"].to_string() + "%",
-                                class_name="text-xs text-stone-400",
+                                class_name="text-xs text-stone-400 dark:text-stone-500",
                             ),
                         ),
                         rx.el.div(
@@ -571,7 +600,7 @@ def bills_table() -> rx.Component:
                             ),
                             rx.el.p(
                                 "@ ₹" + s["rate_per_liter"].to_string() + "/L",
-                                class_name="text-xs text-stone-400",
+                                class_name="text-xs text-stone-400 dark:text-stone-500",
                             ),
                         ),
                         rx.cond(
@@ -593,14 +622,14 @@ def bills_table() -> rx.Component:
                                 rx.el.button(
                                     "Mark Pending",
                                     on_click=lambda: MilkState.toggle_payment(s["id"]),
-                                    class_name="px-3 py-1.5 rounded-md text-xs font-semibold "
-                                    "bg-stone-100 text-stone-600 hover:bg-stone-200 transition",
+                                    class_name="px-3 py-1.5 min-h-[32px] rounded-md text-xs font-semibold "
+                                    "bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300 hover:bg-stone-200 transition",
                                 ),
                                 rx.el.button(
                                     "Mark Paid",
                                     on_click=lambda: MilkState.toggle_payment(s["id"]),
-                                    class_name="px-3 py-1.5 rounded-md text-xs font-semibold "
-                                    "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition",
+                                    class_name="px-3 py-1.5 min-h-[32px] rounded-md text-xs font-semibold "
+                                    "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition dark:bg-emerald-900/50 dark:text-emerald-300 dark:hover:bg-emerald-900",
                                 ),
                             ),
                             rx.cond(
@@ -608,20 +637,20 @@ def bills_table() -> rx.Component:
                                 rx.el.button(
                                     "Confirm?",
                                     on_click=lambda: MilkState.delete_bill(s["id"]),
-                                    class_name="px-3 py-1.5 rounded-md text-xs font-semibold "
-                                    "bg-red-600 text-white hover:bg-red-700 transition",
+                                    class_name="px-3 py-1.5 min-h-[32px] rounded-md text-xs font-semibold "
+                                    "bg-red-600 text-white hover:bg-red-700 transition active:scale-[0.98]",
                                 ),
                                 rx.el.button(
                                     rx.icon("trash-2", class_name="h-4 w-4"),
                                     on_click=lambda: MilkState.set_pending_delete_id(s["id"]),
-                                    class_name="p-1.5 rounded-md text-red-400 hover:bg-red-50 "
-                                    "hover:text-red-600 transition",
+                                    class_name="p-1.5 min-h-[32px] min-w-[32px] rounded-md text-red-400 hover:bg-red-50 "
+                                    "hover:text-red-600 transition active:scale-95 dark:hover:bg-red-950/40",
                                 ),
                             ),
                             class_name="flex gap-2",
                         ),
                         class_name="grid grid-cols-2 md:grid-cols-6 items-center gap-4 "
-                        "bg-white p-4 rounded-2xl shadow-sm border border-stone-100 mb-3",
+                        "bg-white p-4 rounded-2xl shadow-sm border border-stone-100 mb-3 dark:bg-stone-900 dark:border-stone-700",
                     ),
                 ),
                 class_name="",
@@ -631,23 +660,49 @@ def bills_table() -> rx.Component:
     )
 
 
+def _milk_overview_tab() -> rx.Component:
+    """Monthly stats, per-society performance, and bill history."""
+    return rx.el.div(
+        summary_cards(),
+        society_performance(),
+        bills_table(),
+    )
+
+
+def _milk_record_tab() -> rx.Component:
+    """OCR scan + manual entry form + fat-slab rate checker."""
+    return rx.el.div(
+        rx.el.div(
+            rx.el.div(
+                scan_card(),
+                rx.el.div(class_name="h-6"),
+                milk_entry_form(),
+                class_name="lg:col-span-2",
+            ),
+            rate_checker(),
+            class_name="grid grid-cols-1 lg:grid-cols-3 gap-6",
+        ),
+    )
+
+
 def milk_page() -> rx.Component:
-    """The full Milk & Society Bills page."""
+    """The full Milk & Society Bills page (tabbed: Overview / Record)."""
     return dashboard_layout(
         rx.el.div(
-            summary_cards(),
-            rx.el.div(
-                rx.el.div(
-                    scan_card(),
-                    rx.el.div(class_name="h-6"),
-                    milk_entry_form(),
-                    class_name="lg:col-span-2",
-                ),
-                rate_checker(),
-                class_name="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6",
+            segmented_control(
+                MilkState.active_tab,
+                [
+                    ("overview", "Overview", "layout-dashboard"),
+                    ("record", "Record Bill", "circle-plus"),
+                ],
+                MilkState.set_active_tab,
+                container_class="mb-6",
             ),
-            society_performance(),
-            bills_table(),
+            rx.cond(
+                MilkState.active_tab == "record",
+                _milk_record_tab(),
+                _milk_overview_tab(),
+            ),
             class_name="max-w-7xl mx-auto",
         ),
         "Milk & Society Bills",
